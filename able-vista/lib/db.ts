@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const MONGODB_URI =
-  process.env.MONGODB_URI || "mongodb://localhost:27017/ablevista"; // Added db name
+  process.env.MONGODB_URI || "mongodb+srv://aditi156y:p4kYaTT1TkqgPUgb@cluster0.1ysxj.mongodb.net/able-vista"; // Added db name
 
 if (!MONGODB_URI) {
   throw new Error(
