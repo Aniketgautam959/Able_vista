@@ -1,6 +1,29 @@
-import mongoose from 'mongoose';
+import mongoose, { Document, Schema, Types } from 'mongoose';
 
-const courseSchema = new mongoose.Schema({
+export interface ICourse extends Document {
+  title: string;
+  description: string;
+  category: 'Web Development' | 'AI' | 'Design' | 'Data Science' | 'Mobile Development' | 'DevOps' | 'Other';
+  instructor: Types.ObjectId;
+  level: 'Beginner' | 'Intermediate' | 'Advanced';
+  price: number;
+  duration: string;
+  estimatedHours: number;
+  image: string;
+  skills: string[];
+  requirements: string[];
+  whatYouLearn: string[];
+  rating: number;
+  totalReviews: number;
+  totalStudents: number;
+  isPublished: boolean;
+  chapters: Types.ObjectId[];
+  createdAt: Date;
+  updatedAt: Date;
+  calculateAverageRating(): Promise<void>;
+}
+
+const courseSchema = new Schema<ICourse>({
   title: {
     type: String,
     required: true,
@@ -18,7 +41,7 @@ const courseSchema = new mongoose.Schema({
     enum: ['Web Development', 'AI', 'Design', 'Data Science', 'Mobile Development', 'DevOps', 'Other']
   },
   instructor: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'Instructor',
     required: true
   },
@@ -34,7 +57,7 @@ const courseSchema = new mongoose.Schema({
   },
   duration: {
     type: String,
-    required: true // e.g., "12 weeks", "3 months"
+    required: true
   },
   estimatedHours: {
     type: Number,
@@ -42,7 +65,7 @@ const courseSchema = new mongoose.Schema({
     min: 1
   },
   image: {
-    type: String, // CSS gradient class or image URL
+    type: String,
     default: 'from-blue-500 to-purple-600'
   },
   skills: [{
@@ -76,7 +99,7 @@ const courseSchema = new mongoose.Schema({
     default: false
   },
   chapters: [{
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'Chapter'
   }],
   createdAt: {
@@ -89,14 +112,12 @@ const courseSchema = new mongoose.Schema({
   }
 });
 
-// Update the updatedAt field before saving
 courseSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
+  this.updatedAt = new Date();
   next();
 });
 
-// Calculate average rating
-courseSchema.methods.calculateAverageRating = async function() {
+courseSchema.methods.calculateAverageRating = async function(): Promise<void> {
   const Review = mongoose.model('Review');
   const stats = await Review.aggregate([
     { $match: { course: this._id } },
@@ -120,4 +141,4 @@ courseSchema.methods.calculateAverageRating = async function() {
   await this.save();
 };
 
-export default mongoose.models.Course || mongoose.model('Course', courseSchema);
+export default mongoose.models.Course || mongoose.model<ICourse>('Course', courseSchema);

@@ -1,6 +1,54 @@
-import mongoose from 'mongoose';
+import mongoose, { Document, Schema, Types } from 'mongoose';
 
-const lessonSchema = new mongoose.Schema({
+interface IQuizQuestion {
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  explanation?: string;
+}
+
+interface IQuiz {
+  questions: IQuizQuestion[];
+  passingScore: number;
+}
+
+interface IAssignment {
+  instructions: string;
+  submissionType: 'text' | 'file' | 'url' | 'code';
+  maxScore: number;
+}
+
+interface IAttachment {
+  name: string;
+  url: string;
+  type: string;
+}
+
+interface ILessonContent {
+  videoUrl?: string;
+  textContent?: string;
+  attachments?: IAttachment[];
+  quiz?: IQuiz;
+  assignment?: IAssignment;
+}
+
+export interface ILesson extends Document {
+  title: string;
+  description?: string;
+  chapter: Types.ObjectId;
+  course: Types.ObjectId;
+  order: number;
+  type: 'video' | 'assignment' | 'quiz' | 'reading' | 'project';
+  duration: string;
+  durationMinutes: number;
+  content: ILessonContent;
+  isPublished: boolean;
+  isFree: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const lessonSchema = new Schema<ILesson>({
   title: {
     type: String,
     required: true,
@@ -12,12 +60,12 @@ const lessonSchema = new mongoose.Schema({
     maxlength: 1000
   },
   chapter: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'Chapter',
     required: true
   },
   course: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'Course',
     required: true
   },
@@ -33,17 +81,17 @@ const lessonSchema = new mongoose.Schema({
   },
   duration: {
     type: String,
-    required: true // e.g., "15 min", "45 min"
+    required: true
   },
   durationMinutes: {
     type: Number,
-    required: true // duration in minutes for calculations
+    required: true
   },
   content: {
     videoUrl: {
       type: String,
       validate: {
-        validator: function(v) {
+        validator: function(this: ILesson, v: string) {
           return this.type !== 'video' || (v && v.length > 0);
         },
         message: 'Video URL is required for video lessons'
@@ -53,7 +101,7 @@ const lessonSchema = new mongoose.Schema({
     attachments: [{
       name: String,
       url: String,
-      type: String // pdf, doc, etc.
+      type: String
     }],
     quiz: {
       questions: [{
@@ -100,8 +148,8 @@ const lessonSchema = new mongoose.Schema({
 });
 
 lessonSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
+  this.updatedAt = new Date();
   next();
 });
 
-export default mongoose.models.Lesson || mongoose.model('Lesson', lessonSchema);
+export default mongoose.models.Lesson || mongoose.model<ILesson>('Lesson', lessonSchema);

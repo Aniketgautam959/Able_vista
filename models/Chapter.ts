@@ -1,6 +1,18 @@
-import mongoose from 'mongoose';
+import mongoose, { Document, Schema, Types } from 'mongoose';
 
-const chapterSchema = new mongoose.Schema({
+export interface IChapter extends Document {
+  title: string;
+  description?: string;
+  course: Types.ObjectId;
+  order: number;
+  duration: string;
+  lessons: Types.ObjectId[];
+  isPublished: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const chapterSchema = new Schema<IChapter>({
   title: {
     type: String,
     required: true,
@@ -12,7 +24,7 @@ const chapterSchema = new mongoose.Schema({
     maxlength: 1000
   },
   course: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'Course',
     required: true
   },
@@ -23,10 +35,10 @@ const chapterSchema = new mongoose.Schema({
   },
   duration: {
     type: String,
-    required: true // e.g., "2 hours", "90 minutes"
+    required: true
   },
   lessons: [{
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'Lesson'
   }],
   isPublished: {
@@ -44,8 +56,8 @@ const chapterSchema = new mongoose.Schema({
 });
 
 chapterSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
+  this.updatedAt = new Date();
   next();
 });
 
-export default mongoose.models.Chapter || mongoose.model('Chapter', chapterSchema);
+export default mongoose.models.Chapter || mongoose.model<IChapter>('Chapter', chapterSchema);

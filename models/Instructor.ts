@@ -1,8 +1,35 @@
-import mongoose from 'mongoose';
+import mongoose, { Document, Schema, Types } from 'mongoose';
 
-const instructorSchema = new mongoose.Schema({
+interface ISocialLinks {
+  linkedin?: string;
+  twitter?: string;
+  github?: string;
+  website?: string;
+}
+
+export interface IInstructor extends Document {
+  user: Types.ObjectId;
+  title: string;
+  company?: string;
+  bio?: string;
+  expertise: string[];
+  experience?: string;
+  avatar: string;
+  socialLinks: ISocialLinks;
+  rating: number;
+  totalStudents: number;
+  totalCourses: number;
+  totalReviews: number;
+  isVerified: boolean;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  calculateStats(): Promise<void>;
+}
+
+const instructorSchema = new Schema<IInstructor>({
   user: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
@@ -26,7 +53,7 @@ const instructorSchema = new mongoose.Schema({
     trim: true
   }],
   experience: {
-    type: String, // e.g., "8+ years"
+    type: String,
     maxlength: 50
   },
   avatar: {
@@ -76,26 +103,22 @@ const instructorSchema = new mongoose.Schema({
 });
 
 instructorSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
+  this.updatedAt = new Date();
   next();
 });
 
-// Calculate instructor stats
-instructorSchema.methods.calculateStats = async function() {
+instructorSchema.methods.calculateStats = async function(): Promise<void> {
   const Course = mongoose.model('Course');
   const Enrollment = mongoose.model('Enrollment');
   const Review = mongoose.model('Review');
 
-  // Get total courses
   const totalCourses = await Course.countDocuments({ instructor: this._id, isPublished: true });
   
-  // Get total students (unique enrollments across all courses)
   const courses = await Course.find({ instructor: this._id }).select('_id');
   const courseIds = courses.map(course => course._id);
   
   const totalStudents = await Enrollment.distinct('user', { course: { $in: courseIds } });
   
-  // Get average rating from course reviews
   const ratingStats = await Review.aggregate([
     { $match: { course: { $in: courseIds } } },
     {
@@ -118,4 +141,4 @@ instructorSchema.methods.calculateStats = async function() {
   await this.save();
 };
 
-export default mongoose.models.Instructor || mongoose.model('Instructor', instructorSchema);
+export default mongoose.models.Instructor || mongoose.model<IInstructor>('Instructor', instructorSchema);

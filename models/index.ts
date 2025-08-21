@@ -1,15 +1,14 @@
-// Central export file for all models
-import User from './User.js';
-import Course from './Course.js';
-import Chapter from './Chapter.js';
-import Lesson from './Lesson.js';
-import Instructor from './Instructor.js';
-import Enrollment from './Enrollment.js';
-import Progress from './Progress.js';
-import Review from './Review.js';
-import UserProfile from './UserProfile.js';
-import { Achievement, UserAchievement } from './Achievement.js';
-import Feedback from './Feedback.js';
+import User from './User';
+import Course from './Course';
+import Chapter from './Chapter';
+import Lesson from './Lesson';
+import Instructor from './Instructor';
+import Enrollment from './Enrollment';
+import Progress from './Progress';
+import Review from './Review';
+import UserProfile from './UserProfile';
+import { Achievement, UserAchievement } from './Achievement';
+import Feedback from './Feedback';
 
 export {
   User,
@@ -26,9 +25,21 @@ export {
   Feedback
 };
 
-// Helper function to initialize default achievements
-export async function initializeDefaultAchievements() {
-  const defaultAchievements = [
+interface IAchievementData {
+  title: string;
+  description: string;
+  icon: string;
+  category: 'completion' | 'streak' | 'speed' | 'engagement' | 'milestone' | 'special';
+  criteria: {
+    type: 'courses_completed' | 'lessons_completed' | 'streak_days' | 'total_hours' | 'perfect_scores' | 'first_course' | 'review_given' | 'profile_completed';
+    value: number;
+  };
+  points: number;
+  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+}
+
+export async function initializeDefaultAchievements(): Promise<void> {
+  const defaultAchievements: IAchievementData[] = [
     {
       title: "First Course Completed",
       description: "Completed your first course",

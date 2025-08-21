@@ -1,13 +1,40 @@
-import mongoose from 'mongoose';
+import mongoose, { Document, Schema, Types } from 'mongoose';
 
-const enrollmentSchema = new mongoose.Schema({
+interface ICompletedLesson {
+  lesson: Types.ObjectId;
+  completedAt: Date;
+  score?: number;
+  timeSpent?: number;
+}
+
+export interface IEnrollment extends Document {
+  user: Types.ObjectId;
+  course: Types.ObjectId;
+  status: 'active' | 'completed' | 'dropped' | 'paused';
+  progress: number;
+  completedLessons: ICompletedLesson[];
+  totalTimeSpent: number;
+  currentLesson?: Types.ObjectId;
+  lastAccessedAt: Date;
+  enrolledAt: Date;
+  completedAt?: Date;
+  certificateIssued: boolean;
+  certificateUrl?: string;
+  paymentStatus: 'pending' | 'completed' | 'failed' | 'refunded';
+  paymentId?: string;
+  amountPaid?: number;
+  calculateProgress(): Promise<void>;
+  completeLesson(lessonId: Types.ObjectId, score?: number, timeSpent?: number): Promise<void>;
+}
+
+const enrollmentSchema = new Schema<IEnrollment>({
   user: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
   course: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'Course',
     required: true
   },
@@ -24,22 +51,22 @@ const enrollmentSchema = new mongoose.Schema({
   },
   completedLessons: [{
     lesson: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'Lesson'
     },
     completedAt: {
       type: Date,
       default: Date.now
     },
-    score: Number, // for quizzes/assignments
-    timeSpent: Number // in minutes
+    score: Number,
+    timeSpent: Number
   }],
   totalTimeSpent: {
     type: Number,
-    default: 0 // in minutes
+    default: 0
   },
   currentLesson: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'Lesson'
   },
   lastAccessedAt: {
@@ -65,14 +92,11 @@ const enrollmentSchema = new mongoose.Schema({
   amountPaid: Number
 });
 
-// Compound index to ensure one enrollment per user per course
 enrollmentSchema.index({ user: 1, course: 1 }, { unique: true });
 
-// Calculate progress based on completed lessons
-enrollmentSchema.methods.calculateProgress = async function() {
+enrollmentSchema.methods.calculateProgress = async function(): Promise<void> {
   const Lesson = mongoose.model('Lesson');
   
-  // Get total lessons in the course
   const totalLessons = await Lesson.countDocuments({ 
     course: this.course, 
     isPublished: true 
@@ -86,7 +110,6 @@ enrollmentSchema.methods.calculateProgress = async function() {
   const completedCount = this.completedLessons.length;
   this.progress = Math.round((completedCount / totalLessons) * 100);
   
-  // Update status based on progress
   if (this.progress === 100 && this.status === 'active') {
     this.status = 'completed';
     this.completedAt = new Date();
@@ -95,11 +118,13 @@ enrollmentSchema.methods.calculateProgress = async function() {
   await this.save();
 };
 
-// Mark lesson as completed
-enrollmentSchema.methods.completeLesson = async function(lessonId, score = null, timeSpent = 0) {
-  // Check if lesson is already completed
+enrollmentSchema.methods.completeLesson = async function(
+  lessonId: Types.ObjectId, 
+  score?: number, 
+  timeSpent: number = 0
+): Promise<void> {
   const existingCompletion = this.completedLessons.find(
-    completion => completion.lesson.toString() === lessonId.toString()
+    (completion: ICompletedLesson) => completion.lesson.toString() === lessonId.toString()
   );
   
   if (!existingCompletion) {
@@ -117,4 +142,4 @@ enrollmentSchema.methods.completeLesson = async function(lessonId, score = null,
   }
 };
 
-export default mongoose.models.Enrollment || mongoose.model('Enrollment', enrollmentSchema);
+export default mongoose.models.Enrollment || mongoose.model<IEnrollment>('Enrollment', enrollmentSchema);

@@ -1,8 +1,65 @@
-import mongoose from 'mongoose';
+import mongoose, { Document, Schema, Types } from 'mongoose';
 
-const feedbackSchema = new mongoose.Schema({
+interface IRelatedTo {
+  course?: Types.ObjectId;
+  lesson?: Types.ObjectId;
+  instructor?: Types.ObjectId;
+}
+
+interface IAttachment {
+  name: string;
+  url: string;
+  type: string;
+  size: number;
+}
+
+interface IBrowserInfo {
+  userAgent?: string;
+  platform?: string;
+  language?: string;
+  screenResolution?: string;
+}
+
+interface IAdminResponse {
+  message: string;
+  respondedBy: Types.ObjectId;
+  respondedAt: Date;
+}
+
+interface IInternalNote {
+  note: string;
+  addedBy: Types.ObjectId;
+  addedAt: Date;
+}
+
+export interface IFeedback extends Document {
+  user: Types.ObjectId;
+  type: 'course' | 'lesson' | 'platform' | 'instructor' | 'bug_report' | 'feature_request';
+  relatedTo: IRelatedTo;
+  title: string;
+  description: string;
+  category: 'content_quality' | 'technical_issue' | 'user_experience' | 'accessibility' | 'performance' | 'suggestion' | 'complaint' | 'praise' | 'other';
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  status: 'open' | 'in_progress' | 'resolved' | 'closed' | 'duplicate';
+  rating?: number;
+  attachments: IAttachment[];
+  browserInfo: IBrowserInfo;
+  adminResponse?: IAdminResponse;
+  internalNotes: IInternalNote[];
+  tags: string[];
+  isPublic: boolean;
+  upvotes: number;
+  upvotedBy: Types.ObjectId[];
+  createdAt: Date;
+  updatedAt: Date;
+  resolvedAt?: Date;
+  addUpvote(userId: Types.ObjectId): void;
+  removeUpvote(userId: Types.ObjectId): void;
+}
+
+const feedbackSchema = new Schema<IFeedback>({
   user: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
@@ -13,15 +70,15 @@ const feedbackSchema = new mongoose.Schema({
   },
   relatedTo: {
     course: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'Course'
     },
     lesson: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'Lesson'
     },
     instructor: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'Instructor'
     }
   },
@@ -82,7 +139,7 @@ const feedbackSchema = new mongoose.Schema({
   adminResponse: {
     message: String,
     respondedBy: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'User'
     },
     respondedAt: Date
@@ -90,7 +147,7 @@ const feedbackSchema = new mongoose.Schema({
   internalNotes: [{
     note: String,
     addedBy: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'User'
     },
     addedAt: {
@@ -111,7 +168,7 @@ const feedbackSchema = new mongoose.Schema({
     default: 0
   },
   upvotedBy: [{
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'User'
   }],
   createdAt: {
@@ -130,7 +187,7 @@ feedbackSchema.index({ status: 1, priority: -1 });
 feedbackSchema.index({ type: 1, category: 1 });
 
 feedbackSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
+  this.updatedAt = new Date();
   
   if (this.status === 'resolved' && !this.resolvedAt) {
     this.resolvedAt = new Date();
@@ -139,16 +196,14 @@ feedbackSchema.pre('save', function(next) {
   next();
 });
 
-// Add upvote
-feedbackSchema.methods.addUpvote = function(userId) {
+feedbackSchema.methods.addUpvote = function(userId: Types.ObjectId): void {
   if (!this.upvotedBy.includes(userId)) {
     this.upvotedBy.push(userId);
     this.upvotes += 1;
   }
 };
 
-// Remove upvote
-feedbackSchema.methods.removeUpvote = function(userId) {
+feedbackSchema.methods.removeUpvote = function(userId: Types.ObjectId): void {
   const index = this.upvotedBy.indexOf(userId);
   if (index > -1) {
     this.upvotedBy.splice(index, 1);
@@ -156,4 +211,4 @@ feedbackSchema.methods.removeUpvote = function(userId) {
   }
 };
 
-export default mongoose.models.Feedback || mongoose.model('Feedback', feedbackSchema);
+export default mongoose.models.Feedback || mongoose.model<IFeedback>('Feedback', feedbackSchema);

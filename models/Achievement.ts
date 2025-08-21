@@ -1,6 +1,37 @@
-import mongoose from 'mongoose';
+import mongoose, { Document, Schema, Types } from 'mongoose';
 
-const achievementSchema = new mongoose.Schema({
+interface ICriteria {
+  type: 'courses_completed' | 'lessons_completed' | 'streak_days' | 'total_hours' | 'perfect_scores' | 'first_course' | 'review_given' | 'profile_completed';
+  value: number;
+  comparison: 'gte' | 'lte' | 'eq';
+}
+
+export interface IAchievement extends Document {
+  title: string;
+  description: string;
+  icon: string;
+  category: 'completion' | 'streak' | 'speed' | 'engagement' | 'milestone' | 'special';
+  criteria: ICriteria;
+  points: number;
+  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+  isActive: boolean;
+  createdAt: Date;
+}
+
+export interface IUserAchievement extends Document {
+  user: Types.ObjectId;
+  achievement: Types.ObjectId;
+  earnedAt: Date;
+  progress: number;
+  isCompleted: boolean;
+  notified: boolean;
+}
+
+export interface IUserAchievementModel extends mongoose.Model<IUserAchievement> {
+  checkAchievements(userId: Types.ObjectId): Promise<IAchievement[]>;
+}
+
+const achievementSchema = new Schema<IAchievement>({
   title: {
     type: String,
     required: true,
@@ -15,7 +46,7 @@ const achievementSchema = new mongoose.Schema({
   },
   icon: {
     type: String,
-    required: true // Lucide icon name or emoji
+    required: true
   },
   category: {
     type: String,
@@ -67,15 +98,14 @@ const achievementSchema = new mongoose.Schema({
   }
 });
 
-// User Achievement tracking
-const userAchievementSchema = new mongoose.Schema({
+const userAchievementSchema = new Schema<IUserAchievement>({
   user: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
   achievement: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'Achievement',
     required: true
   },
@@ -101,20 +131,18 @@ const userAchievementSchema = new mongoose.Schema({
 
 userAchievementSchema.index({ user: 1, achievement: 1 }, { unique: true });
 
-// Check if user qualifies for achievements
-userAchievementSchema.statics.checkAchievements = async function(userId) {
+userAchievementSchema.statics.checkAchievements = async function(userId: Types.ObjectId): Promise<IAchievement[]> {
   const UserProfile = mongoose.model('UserProfile');
   const Achievement = mongoose.model('Achievement');
   const UserAchievement = this;
   
   const userProfile = await UserProfile.findOne({ user: userId });
-  if (!userProfile) return;
+  if (!userProfile) return [];
   
   const achievements = await Achievement.find({ isActive: true });
-  const newAchievements = [];
+  const newAchievements: IAchievement[] = [];
   
   for (const achievement of achievements) {
-    // Check if user already has this achievement
     const existingAchievement = await UserAchievement.findOne({
       user: userId,
       achievement: achievement._id
@@ -124,7 +152,6 @@ userAchievementSchema.statics.checkAchievements = async function(userId) {
       continue;
     }
     
-    // Check if user meets criteria
     let userValue = 0;
     switch (achievement.criteria.type) {
       case 'courses_completed':
@@ -139,7 +166,6 @@ userAchievementSchema.statics.checkAchievements = async function(userId) {
       case 'total_hours':
         userValue = userProfile.stats.totalHours;
         break;
-      // Add more criteria as needed
     }
     
     let qualifies = false;
@@ -172,7 +198,6 @@ userAchievementSchema.statics.checkAchievements = async function(userId) {
       
       newAchievements.push(achievement);
     } else if (!existingAchievement) {
-      // Create progress tracking
       const progress = Math.min((userValue / achievement.criteria.value) * 100, 100);
       await UserAchievement.create({
         user: userId,
@@ -185,8 +210,8 @@ userAchievementSchema.statics.checkAchievements = async function(userId) {
   return newAchievements;
 };
 
-const Achievement = mongoose.models.Achievement || mongoose.model('Achievement', achievementSchema);
-const UserAchievement = mongoose.models.UserAchievement || mongoose.model('UserAchievement', userAchievementSchema);
+const Achievement = mongoose.models.Achievement || mongoose.model<IAchievement>('Achievement', achievementSchema);
+const UserAchievement = mongoose.models.UserAchievement || mongoose.model<IUserAchievement, IUserAchievementModel>('UserAchievement', userAchievementSchema);
 
 export { Achievement, UserAchievement };
 export default Achievement;

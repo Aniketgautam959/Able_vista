@@ -1,18 +1,58 @@
-import mongoose from 'mongoose';
+import mongoose, { Document, Schema, Types } from 'mongoose';
 
-const progressSchema = new mongoose.Schema({
+interface IAttempt {
+  attemptNumber: number;
+  score: number;
+  maxScore: number;
+  answers?: any;
+  submittedAt: Date;
+  feedback?: string;
+}
+
+interface INote {
+  content: string;
+  timestamp?: number;
+  createdAt: Date;
+}
+
+interface IBookmark {
+  title: string;
+  timestamp?: number;
+  createdAt: Date;
+}
+
+export interface IProgress extends Document {
+  user: Types.ObjectId;
+  course: Types.ObjectId;
+  lesson: Types.ObjectId;
+  status: 'not_started' | 'in_progress' | 'completed';
+  completionPercentage: number;
+  timeSpent: number;
+  lastPosition: number;
+  attempts: IAttempt[];
+  bestScore: number;
+  notes: INote[];
+  bookmarks: IBookmark[];
+  startedAt?: Date;
+  completedAt?: Date;
+  lastAccessedAt: Date;
+  markCompleted(): void;
+  addAttempt(score: number, maxScore: number, answers?: any, feedback?: string): void;
+}
+
+const progressSchema = new Schema<IProgress>({
   user: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
   course: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'Course',
     required: true
   },
   lesson: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'Lesson',
     required: true
   },
@@ -29,17 +69,17 @@ const progressSchema = new mongoose.Schema({
   },
   timeSpent: {
     type: Number,
-    default: 0 // in minutes
+    default: 0
   },
   lastPosition: {
     type: Number,
-    default: 0 // for video lessons, track last watched position in seconds
+    default: 0
   },
   attempts: [{
     attemptNumber: Number,
     score: Number,
     maxScore: Number,
-    answers: mongoose.Schema.Types.Mixed, // for quiz answers
+    answers: Schema.Types.Mixed,
     submittedAt: {
       type: Date,
       default: Date.now
@@ -52,7 +92,7 @@ const progressSchema = new mongoose.Schema({
   },
   notes: [{
     content: String,
-    timestamp: Number, // for video lessons
+    timestamp: Number,
     createdAt: {
       type: Date,
       default: Date.now
@@ -74,19 +114,16 @@ const progressSchema = new mongoose.Schema({
   }
 });
 
-// Compound index for efficient queries
 progressSchema.index({ user: 1, course: 1, lesson: 1 }, { unique: true });
 progressSchema.index({ user: 1, course: 1 });
 progressSchema.index({ user: 1, status: 1 });
 
-// Update last accessed time before saving
 progressSchema.pre('save', function(next) {
   this.lastAccessedAt = new Date();
   next();
 });
 
-// Mark lesson as completed
-progressSchema.methods.markCompleted = function() {
+progressSchema.methods.markCompleted = function(): void {
   this.status = 'completed';
   this.completionPercentage = 100;
   this.completedAt = new Date();
@@ -95,8 +132,12 @@ progressSchema.methods.markCompleted = function() {
   }
 };
 
-// Add attempt (for quizzes/assignments)
-progressSchema.methods.addAttempt = function(score, maxScore, answers = null, feedback = null) {
+progressSchema.methods.addAttempt = function(
+  score: number, 
+  maxScore: number, 
+  answers: any = null, 
+  feedback: string | null = null
+): void {
   const attemptNumber = this.attempts.length + 1;
   
   this.attempts.push({
@@ -108,13 +149,11 @@ progressSchema.methods.addAttempt = function(score, maxScore, answers = null, fe
     feedback
   });
   
-  // Update best score
   if (score > this.bestScore) {
     this.bestScore = score;
   }
   
-  // Mark as completed if passing score is achieved
-  const passingPercentage = 70; // Can be made configurable
+  const passingPercentage = 70;
   const scorePercentage = (score / maxScore) * 100;
   
   if (scorePercentage >= passingPercentage) {
@@ -125,4 +164,4 @@ progressSchema.methods.addAttempt = function(score, maxScore, answers = null, fe
   }
 };
 
-export default mongoose.models.Progress || mongoose.model('Progress', progressSchema);
+export default mongoose.models.Progress || mongoose.model<IProgress>('Progress', progressSchema);

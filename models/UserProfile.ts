@@ -1,8 +1,74 @@
-import mongoose from 'mongoose';
+import mongoose, { Document, Schema, Types } from 'mongoose';
 
-const userProfileSchema = new mongoose.Schema({
+interface ISocialLinks {
+  linkedin?: string;
+  github?: string;
+  twitter?: string;
+  portfolio?: string;
+}
+
+interface IEmailNotifications {
+  courseUpdates: boolean;
+  newCourses: boolean;
+  achievements: boolean;
+  reminders: boolean;
+}
+
+interface IPrivacySettings {
+  showProfile: boolean;
+  showProgress: boolean;
+  showAchievements: boolean;
+}
+
+interface IAccessibilitySettings {
+  textToSpeech: boolean;
+  speechToText: boolean;
+  highContrast: boolean;
+  fontSize: 'small' | 'medium' | 'large';
+}
+
+interface IPreferences {
+  emailNotifications: IEmailNotifications;
+  privacy: IPrivacySettings;
+  accessibility: IAccessibilitySettings;
+}
+
+interface IUserStats {
+  totalCourses: number;
+  completedCourses: number;
+  inProgressCourses: number;
+  totalLessons: number;
+  completedLessons: number;
+  totalHours: number;
+  currentStreak: number;
+  longestStreak: number;
+  certificates: number;
+  lastActivityDate?: Date;
+}
+
+export interface IUserProfile extends Document {
+  user: Types.ObjectId;
+  bio?: string;
+  avatar: string;
+  location?: string;
+  timezone: string;
+  learningGoal?: string;
+  interests: string[];
+  skillLevel: 'beginner' | 'intermediate' | 'advanced';
+  preferredLearningStyle: 'visual' | 'auditory' | 'kinesthetic' | 'reading';
+  socialLinks: ISocialLinks;
+  preferences: IPreferences;
+  stats: IUserStats;
+  achievements: Types.ObjectId[];
+  createdAt: Date;
+  updatedAt: Date;
+  calculateStats(): Promise<void>;
+  updateStreak(): Promise<void>;
+}
+
+const userProfileSchema = new Schema<IUserProfile>({
   user: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'User',
     required: true,
     unique: true
@@ -142,7 +208,7 @@ const userProfileSchema = new mongoose.Schema({
     lastActivityDate: Date
   },
   achievements: [{
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'Achievement'
   }],
   createdAt: {
@@ -156,29 +222,24 @@ const userProfileSchema = new mongoose.Schema({
 });
 
 userProfileSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
+  this.updatedAt = new Date();
   next();
 });
 
-// Calculate user statistics
-userProfileSchema.methods.calculateStats = async function() {
+userProfileSchema.methods.calculateStats = async function(): Promise<void> {
   const Enrollment = mongoose.model('Enrollment');
   const Progress = mongoose.model('Progress');
   
-  // Get enrollment stats
   const enrollments = await Enrollment.find({ user: this.user });
   const completedEnrollments = enrollments.filter(e => e.status === 'completed');
   const inProgressEnrollments = enrollments.filter(e => e.status === 'active');
   
-  // Get lesson progress stats
   const allProgress = await Progress.find({ user: this.user });
   const completedLessons = allProgress.filter(p => p.status === 'completed');
   
-  // Calculate total time spent
   const totalMinutes = allProgress.reduce((sum, progress) => sum + progress.timeSpent, 0);
   const totalHours = Math.round(totalMinutes / 60);
   
-  // Update stats
   this.stats.totalCourses = enrollments.length;
   this.stats.completedCourses = completedEnrollments.length;
   this.stats.inProgressCourses = inProgressEnrollments.length;
@@ -189,11 +250,9 @@ userProfileSchema.methods.calculateStats = async function() {
   await this.save();
 };
 
-// Update learning streak
-userProfileSchema.methods.updateStreak = async function() {
+userProfileSchema.methods.updateStreak = async function(): Promise<void> {
   const Progress = mongoose.model('Progress');
   
-  // Get recent activity (lessons completed in last few days)
   const recentActivity = await Progress.find({
     user: this.user,
     status: 'completed',
@@ -205,7 +264,6 @@ userProfileSchema.methods.updateStreak = async function() {
     return;
   }
   
-  // Calculate current streak
   let currentStreak = 0;
   let currentDate = new Date();
   currentDate.setHours(0, 0, 0, 0);
@@ -214,7 +272,7 @@ userProfileSchema.methods.updateStreak = async function() {
     const activityDate = new Date(recentActivity[i].completedAt);
     activityDate.setHours(0, 0, 0, 0);
     
-    const daysDiff = Math.floor((currentDate - activityDate) / (1000 * 60 * 60 * 24));
+    const daysDiff = Math.floor((currentDate.getTime() - activityDate.getTime()) / (1000 * 60 * 60 * 24));
     
     if (daysDiff === currentStreak) {
       currentStreak++;
@@ -225,7 +283,6 @@ userProfileSchema.methods.updateStreak = async function() {
   
   this.stats.currentStreak = currentStreak;
   
-  // Update longest streak if current is higher
   if (currentStreak > this.stats.longestStreak) {
     this.stats.longestStreak = currentStreak;
   }
@@ -234,4 +291,4 @@ userProfileSchema.methods.updateStreak = async function() {
   await this.save();
 };
 
-export default mongoose.models.UserProfile || mongoose.model('UserProfile', userProfileSchema);
+export default mongoose.models.UserProfile || mongoose.model<IUserProfile>('UserProfile', userProfileSchema);
