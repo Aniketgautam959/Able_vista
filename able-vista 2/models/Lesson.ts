@@ -1,23 +1,5 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
 
-interface IQuizQuestion {
-  question: string;
-  options: string[];
-  correctAnswer: number;
-  explanation?: string;
-}
-
-interface IQuiz {
-  questions: IQuizQuestion[];
-  passingScore: number;
-}
-
-interface IAssignment {
-  instructions: string;
-  submissionType: 'text' | 'file' | 'url' | 'code';
-  maxScore: number;
-}
-
 interface IAttachment {
   name: string;
   url: string;
@@ -28,8 +10,6 @@ interface ILessonContent {
   videoUrl?: string;
   textContent?: string;
   attachments?: IAttachment[];
-  quiz?: IQuiz;
-  assignment?: IAssignment;
 }
 
 export interface ILesson extends Document {
@@ -38,7 +18,7 @@ export interface ILesson extends Document {
   chapter: Types.ObjectId;
   course: Types.ObjectId;
   order: number;
-  type: 'video' | 'assignment' | 'quiz' | 'reading' | 'project';
+  type: 'video' | 'reading' | 'project';
   duration: string;
   durationMinutes: number;
   content: ILessonContent;
@@ -77,7 +57,7 @@ const lessonSchema = new Schema<ILesson>({
   type: {
     type: String,
     required: true,
-    enum: ['video', 'assignment', 'quiz', 'reading', 'project']
+    enum: ['video', 'reading', 'project']
   },
   duration: {
     type: String,
@@ -102,32 +82,7 @@ const lessonSchema = new Schema<ILesson>({
       name: String,
       url: String,
       type: String
-    }],
-    quiz: {
-      questions: [{
-        question: String,
-        options: [String],
-        correctAnswer: Number,
-        explanation: String
-      }],
-      passingScore: {
-        type: Number,
-        min: 0,
-        max: 100,
-        default: 70
-      }
-    },
-    assignment: {
-      instructions: String,
-      submissionType: {
-        type: String,
-        enum: ['text', 'file', 'url', 'code']
-      },
-      maxScore: {
-        type: Number,
-        default: 100
-      }
-    }
+    }]
   },
   isPublished: {
     type: Boolean,

@@ -7,7 +7,7 @@ import Enrollment from './Enrollment';
 import Progress from './Progress';
 import Review from './Review';
 import UserProfile from './UserProfile';
-import { Achievement, UserAchievement } from './Achievement';
+import AchievementModel, { UserAchievement } from './Achievement';
 import Feedback from './Feedback';
 
 export {
@@ -20,7 +20,7 @@ export {
   Progress,
   Review,
   UserProfile,
-  Achievement,
+  AchievementModel as Achievement,
   UserAchievement,
   Feedback
 };
@@ -29,13 +29,11 @@ interface IAchievementData {
   title: string;
   description: string;
   icon: string;
-  category: 'completion' | 'streak' | 'speed' | 'engagement' | 'milestone' | 'special';
+  category: 'completion' | 'streak' | 'milestone';
   criteria: {
-    type: 'courses_completed' | 'lessons_completed' | 'streak_days' | 'total_hours' | 'perfect_scores' | 'first_course' | 'review_given' | 'profile_completed';
+    type: 'courses_completed' | 'lessons_completed' | 'streak_days' | 'total_hours';
     value: number;
   };
-  points: number;
-  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 }
 
 export async function initializeDefaultAchievements(): Promise<void> {
@@ -45,56 +43,39 @@ export async function initializeDefaultAchievements(): Promise<void> {
       description: "Completed your first course",
       icon: "Trophy",
       category: "completion",
-      criteria: { type: "courses_completed", value: 1 },
-      points: 50,
-      rarity: "common"
+      criteria: { type: "courses_completed", value: 1 }
     },
     {
       title: "Week Warrior",
       description: "7-day learning streak",
       icon: "Target",
       category: "streak",
-      criteria: { type: "streak_days", value: 7 },
-      points: 30,
-      rarity: "common"
-    },
-    {
-      title: "Speed Learner",
-      description: "Completed 5 lessons in one day",
-      icon: "TrendingUp",
-      category: "speed",
-      criteria: { type: "lessons_completed", value: 5 },
-      points: 25,
-      rarity: "uncommon"
+      criteria: { type: "streak_days", value: 7 }
     },
     {
       title: "Dedicated Student",
       description: "30-day learning streak",
       icon: "Award",
       category: "streak",
-      criteria: { type: "streak_days", value: 30 },
-      points: 100,
-      rarity: "rare"
+      criteria: { type: "streak_days", value: 30 }
     },
     {
       title: "Course Master",
       description: "Completed 10 courses",
       icon: "BookOpen",
       category: "completion",
-      criteria: { type: "courses_completed", value: 10 },
-      points: 200,
-      rarity: "epic"
+      criteria: { type: "courses_completed", value: 10 }
     }
   ];
 
   try {
     for (const achievementData of defaultAchievements) {
-      const existingAchievement = await Achievement.findOne({ 
+      const existingAchievement = await AchievementModel.findOne({ 
         title: achievementData.title 
       });
       
       if (!existingAchievement) {
-        await Achievement.create(achievementData);
+        await AchievementModel.create(achievementData);
         console.log(`Created achievement: ${achievementData.title}`);
       }
     }

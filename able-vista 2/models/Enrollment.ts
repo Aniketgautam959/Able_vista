@@ -18,11 +18,6 @@ export interface IEnrollment extends Document {
   lastAccessedAt: Date;
   enrolledAt: Date;
   completedAt?: Date;
-  certificateIssued: boolean;
-  certificateUrl?: string;
-  paymentStatus: 'pending' | 'completed' | 'failed' | 'refunded';
-  paymentId?: string;
-  amountPaid?: number;
   calculateProgress(): Promise<void>;
   completeLesson(lessonId: Types.ObjectId, score?: number, timeSpent?: number): Promise<void>;
 }
@@ -77,19 +72,7 @@ const enrollmentSchema = new Schema<IEnrollment>({
     type: Date,
     default: Date.now
   },
-  completedAt: Date,
-  certificateIssued: {
-    type: Boolean,
-    default: false
-  },
-  certificateUrl: String,
-  paymentStatus: {
-    type: String,
-    enum: ['pending', 'completed', 'failed', 'refunded'],
-    default: 'pending'
-  },
-  paymentId: String,
-  amountPaid: Number
+  completedAt: Date
 });
 
 enrollmentSchema.index({ user: 1, course: 1 }, { unique: true });

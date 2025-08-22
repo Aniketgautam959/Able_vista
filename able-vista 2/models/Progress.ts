@@ -1,26 +1,5 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
 
-interface IAttempt {
-  attemptNumber: number;
-  score: number;
-  maxScore: number;
-  answers?: any;
-  submittedAt: Date;
-  feedback?: string;
-}
-
-interface INote {
-  content: string;
-  timestamp?: number;
-  createdAt: Date;
-}
-
-interface IBookmark {
-  title: string;
-  timestamp?: number;
-  createdAt: Date;
-}
-
 export interface IProgress extends Document {
   user: Types.ObjectId;
   course: Types.ObjectId;
@@ -29,15 +8,11 @@ export interface IProgress extends Document {
   completionPercentage: number;
   timeSpent: number;
   lastPosition: number;
-  attempts: IAttempt[];
   bestScore: number;
-  notes: INote[];
-  bookmarks: IBookmark[];
   startedAt?: Date;
   completedAt?: Date;
   lastAccessedAt: Date;
   markCompleted(): void;
-  addAttempt(score: number, maxScore: number, answers?: any, feedback?: string): void;
 }
 
 const progressSchema = new Schema<IProgress>({
@@ -75,37 +50,10 @@ const progressSchema = new Schema<IProgress>({
     type: Number,
     default: 0
   },
-  attempts: [{
-    attemptNumber: Number,
-    score: Number,
-    maxScore: Number,
-    answers: Schema.Types.Mixed,
-    submittedAt: {
-      type: Date,
-      default: Date.now
-    },
-    feedback: String
-  }],
   bestScore: {
     type: Number,
     default: 0
   },
-  notes: [{
-    content: String,
-    timestamp: Number,
-    createdAt: {
-      type: Date,
-      default: Date.now
-    }
-  }],
-  bookmarks: [{
-    title: String,
-    timestamp: Number,
-    createdAt: {
-      type: Date,
-      default: Date.now
-    }
-  }],
   startedAt: Date,
   completedAt: Date,
   lastAccessedAt: {
@@ -129,38 +77,6 @@ progressSchema.methods.markCompleted = function(): void {
   this.completedAt = new Date();
   if (!this.startedAt) {
     this.startedAt = new Date();
-  }
-};
-
-progressSchema.methods.addAttempt = function(
-  score: number, 
-  maxScore: number, 
-  answers: any = null, 
-  feedback: string | null = null
-): void {
-  const attemptNumber = this.attempts.length + 1;
-  
-  this.attempts.push({
-    attemptNumber,
-    score,
-    maxScore,
-    answers,
-    submittedAt: new Date(),
-    feedback
-  });
-  
-  if (score > this.bestScore) {
-    this.bestScore = score;
-  }
-  
-  const passingPercentage = 70;
-  const scorePercentage = (score / maxScore) * 100;
-  
-  if (scorePercentage >= passingPercentage) {
-    this.markCompleted();
-  } else {
-    this.status = 'in_progress';
-    this.completionPercentage = scorePercentage;
   }
 };
 

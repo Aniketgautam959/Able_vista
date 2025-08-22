@@ -7,30 +7,9 @@ interface ISocialLinks {
   portfolio?: string;
 }
 
-interface IEmailNotifications {
-  courseUpdates: boolean;
-  newCourses: boolean;
-  achievements: boolean;
-  reminders: boolean;
-}
-
-interface IPrivacySettings {
+interface IPreferences {
   showProfile: boolean;
   showProgress: boolean;
-  showAchievements: boolean;
-}
-
-interface IAccessibilitySettings {
-  textToSpeech: boolean;
-  speechToText: boolean;
-  highContrast: boolean;
-  fontSize: 'small' | 'medium' | 'large';
-}
-
-interface IPreferences {
-  emailNotifications: IEmailNotifications;
-  privacy: IPrivacySettings;
-  accessibility: IAccessibilitySettings;
 }
 
 interface IUserStats {
@@ -42,7 +21,6 @@ interface IUserStats {
   totalHours: number;
   currentStreak: number;
   longestStreak: number;
-  certificates: number;
   lastActivityDate?: Date;
 }
 
@@ -59,7 +37,6 @@ export interface IUserProfile extends Document {
   socialLinks: ISocialLinks;
   preferences: IPreferences;
   stats: IUserStats;
-  achievements: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
   calculateStats(): Promise<void>;
@@ -116,56 +93,13 @@ const userProfileSchema = new Schema<IUserProfile>({
     portfolio: String
   },
   preferences: {
-    emailNotifications: {
-      courseUpdates: {
-        type: Boolean,
-        default: true
-      },
-      newCourses: {
-        type: Boolean,
-        default: true
-      },
-      achievements: {
-        type: Boolean,
-        default: true
-      },
-      reminders: {
-        type: Boolean,
-        default: true
-      }
+    showProfile: {
+      type: Boolean,
+      default: true
     },
-    privacy: {
-      showProfile: {
-        type: Boolean,
-        default: true
-      },
-      showProgress: {
-        type: Boolean,
-        default: true
-      },
-      showAchievements: {
-        type: Boolean,
-        default: true
-      }
-    },
-    accessibility: {
-      textToSpeech: {
-        type: Boolean,
-        default: false
-      },
-      speechToText: {
-        type: Boolean,
-        default: false
-      },
-      highContrast: {
-        type: Boolean,
-        default: false
-      },
-      fontSize: {
-        type: String,
-        enum: ['small', 'medium', 'large'],
-        default: 'medium'
-      }
+    showProgress: {
+      type: Boolean,
+      default: true
     }
   },
   stats: {
@@ -201,16 +135,8 @@ const userProfileSchema = new Schema<IUserProfile>({
       type: Number,
       default: 0
     },
-    certificates: {
-      type: Number,
-      default: 0
-    },
     lastActivityDate: Date
   },
-  achievements: [{
-    type: Schema.Types.ObjectId,
-    ref: 'Achievement'
-  }],
   createdAt: {
     type: Date,
     default: Date.now

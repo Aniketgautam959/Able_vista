@@ -1,11 +1,5 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
 
-interface IVote {
-  user: Types.ObjectId;
-  isHelpful: boolean;
-  votedAt: Date;
-}
-
 export interface IReview extends Document {
   user: Types.ObjectId;
   course: Types.ObjectId;
@@ -13,15 +7,7 @@ export interface IReview extends Document {
   rating: number;
   title?: string;
   comment: string;
-  pros: string[];
-  cons: string[];
-  wouldRecommend: boolean;
-  helpfulVotes: number;
-  votedBy: IVote[];
-  isVerifiedPurchase: boolean;
   isPublished: boolean;
-  moderationStatus: 'pending' | 'approved' | 'rejected';
-  moderationNotes?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -59,49 +45,10 @@ const reviewSchema = new Schema<IReview>({
     trim: true,
     maxlength: 1000
   },
-  pros: [{
-    type: String,
-    trim: true,
-    maxlength: 200
-  }],
-  cons: [{
-    type: String,
-    trim: true,
-    maxlength: 200
-  }],
-  wouldRecommend: {
-    type: Boolean,
-    default: true
-  },
-  helpfulVotes: {
-    type: Number,
-    default: 0
-  },
-  votedBy: [{
-    user: {
-      type: Schema.Types.ObjectId,
-      ref: 'User'
-    },
-    isHelpful: Boolean,
-    votedAt: {
-      type: Date,
-      default: Date.now
-    }
-  }],
-  isVerifiedPurchase: {
-    type: Boolean,
-    default: false
-  },
   isPublished: {
     type: Boolean,
     default: true
   },
-  moderationStatus: {
-    type: String,
-    enum: ['pending', 'approved', 'rejected'],
-    default: 'approved'
-  },
-  moderationNotes: String,
   createdAt: {
     type: Date,
     default: Date.now

@@ -6,55 +6,18 @@ interface IRelatedTo {
   instructor?: Types.ObjectId;
 }
 
-interface IAttachment {
-  name: string;
-  url: string;
-  type: string;
-  size: number;
-}
-
-interface IBrowserInfo {
-  userAgent?: string;
-  platform?: string;
-  language?: string;
-  screenResolution?: string;
-}
-
-interface IAdminResponse {
-  message: string;
-  respondedBy: Types.ObjectId;
-  respondedAt: Date;
-}
-
-interface IInternalNote {
-  note: string;
-  addedBy: Types.ObjectId;
-  addedAt: Date;
-}
-
 export interface IFeedback extends Document {
   user: Types.ObjectId;
   type: 'course' | 'lesson' | 'platform' | 'instructor' | 'bug_report' | 'feature_request';
   relatedTo: IRelatedTo;
   title: string;
   description: string;
-  category: 'content_quality' | 'technical_issue' | 'user_experience' | 'accessibility' | 'performance' | 'suggestion' | 'complaint' | 'praise' | 'other';
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  status: 'open' | 'in_progress' | 'resolved' | 'closed' | 'duplicate';
-  rating?: number;
-  attachments: IAttachment[];
-  browserInfo: IBrowserInfo;
-  adminResponse?: IAdminResponse;
-  internalNotes: IInternalNote[];
-  tags: string[];
-  isPublic: boolean;
-  upvotes: number;
-  upvotedBy: Types.ObjectId[];
+  category: 'content_quality' | 'technical_issue' | 'user_experience' | 'suggestion' | 'other';
+  priority: 'low' | 'medium' | 'high';
+  status: 'open' | 'in_progress' | 'resolved' | 'closed';
   createdAt: Date;
   updatedAt: Date;
   resolvedAt?: Date;
-  addUpvote(userId: Types.ObjectId): void;
-  removeUpvote(userId: Types.ObjectId): void;
 }
 
 const feedbackSchema = new Schema<IFeedback>({
@@ -100,77 +63,21 @@ const feedbackSchema = new Schema<IFeedback>({
       'content_quality',
       'technical_issue',
       'user_experience',
-      'accessibility',
-      'performance',
       'suggestion',
-      'complaint',
-      'praise',
       'other'
     ],
     default: 'other'
   },
   priority: {
     type: String,
-    enum: ['low', 'medium', 'high', 'critical'],
+    enum: ['low', 'medium', 'high'],
     default: 'medium'
   },
   status: {
     type: String,
-    enum: ['open', 'in_progress', 'resolved', 'closed', 'duplicate'],
+    enum: ['open', 'in_progress', 'resolved', 'closed'],
     default: 'open'
   },
-  rating: {
-    type: Number,
-    min: 1,
-    max: 5
-  },
-  attachments: [{
-    name: String,
-    url: String,
-    type: String,
-    size: Number
-  }],
-  browserInfo: {
-    userAgent: String,
-    platform: String,
-    language: String,
-    screenResolution: String
-  },
-  adminResponse: {
-    message: String,
-    respondedBy: {
-      type: Schema.Types.ObjectId,
-      ref: 'User'
-    },
-    respondedAt: Date
-  },
-  internalNotes: [{
-    note: String,
-    addedBy: {
-      type: Schema.Types.ObjectId,
-      ref: 'User'
-    },
-    addedAt: {
-      type: Date,
-      default: Date.now
-    }
-  }],
-  tags: [{
-    type: String,
-    trim: true
-  }],
-  isPublic: {
-    type: Boolean,
-    default: false
-  },
-  upvotes: {
-    type: Number,
-    default: 0
-  },
-  upvotedBy: [{
-    type: Schema.Types.ObjectId,
-    ref: 'User'
-  }],
   createdAt: {
     type: Date,
     default: Date.now
@@ -195,20 +102,5 @@ feedbackSchema.pre('save', function(next) {
   
   next();
 });
-
-feedbackSchema.methods.addUpvote = function(userId: Types.ObjectId): void {
-  if (!this.upvotedBy.includes(userId)) {
-    this.upvotedBy.push(userId);
-    this.upvotes += 1;
-  }
-};
-
-feedbackSchema.methods.removeUpvote = function(userId: Types.ObjectId): void {
-  const index = this.upvotedBy.indexOf(userId);
-  if (index > -1) {
-    this.upvotedBy.splice(index, 1);
-    this.upvotes -= 1;
-  }
-};
 
 export default mongoose.models.Feedback || mongoose.model<IFeedback>('Feedback', feedbackSchema);
