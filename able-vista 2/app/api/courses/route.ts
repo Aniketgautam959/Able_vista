@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '../../../lib/db'
 import Course from '../../../models/Course'
+import { Chapter, Instructor } from '../../../models'
 import mongoose from 'mongoose'
 
 interface CourseResponse {
@@ -41,14 +42,12 @@ export async function GET(request: NextRequest): Promise<NextResponse<CourseResp
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 })
+      .lean()
 
     // Manually populate chapters and lessons for each course
     const populatedCourses = await Promise.all(
-      courses.map(async (course) => {
-        const courseObj = course.toObject()
-        
+      courses.map(async (course: any) => {
         // Get chapters for this course
-        const Chapter = mongoose.model('Chapter')
         const chapters = await Chapter.find({ course: course._id })
           .populate({
             path: 'lessons',
@@ -56,9 +55,10 @@ export async function GET(request: NextRequest): Promise<NextResponse<CourseResp
             options: { sort: { order: 1 } }
           })
           .sort({ order: 1 })
+          .lean()
         
-        courseObj.chapters = chapters
-        return courseObj
+        course.chapters = chapters
+        return course
       })
     )
 

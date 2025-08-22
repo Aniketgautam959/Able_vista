@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '../../../../lib/db'
 import Course from '../../../../models/Course'
+import { Chapter, Instructor, Lesson } from '../../../../models'
+import mongoose from 'mongoose'
 
 interface CourseResponse {
   success: boolean
@@ -16,21 +18,10 @@ export async function GET(
   try {
     await dbConnect()
 
-    // First get the course without populate to check raw data
-    const rawCourse = await Course.findById(params.id)
-    console.log('Raw course chapters:', rawCourse?.chapters)
-
-    // Then get with populate
+    // First get the course with basic populate
     const course = await Course.findById(params.id)
       .populate('instructor', 'name title avatar bio expertise')
-      .populate({
-        path: 'chapters',
-        select: 'title description order duration isPublished lessons',
-        populate: {
-          path: 'lessons',
-          select: 'title description type duration durationMinutes isPublished isFree'
-        }
-      })
+      .lean()
 
     if (!course) {
       return NextResponse.json({
@@ -39,9 +30,44 @@ export async function GET(
       }, { status: 404 })
     }
 
+    // Manually populate chapters and lessons for this course
+    const chapters = await Chapter.find({ course: course._id })
+      .populate({
+        path: 'lessons',
+        select: 'title description type duration durationMinutes isPublished isFree order',
+        options: { sort: { order: 1 } }
+      })
+      .sort({ order: 1 })
+      .lean()
+
+    // Debug: Check if lessons exist in the database
+    const allLessons = await Lesson.find({ course: course._id }).lean()
+    console.log('All lessons for course:', allLessons.length)
+    console.log('All lessons:', allLessons)
+
+    // If lessons exist but aren't being populated, try alternative approach
+    if (allLessons.length > 0 && chapters.every(chapter => !chapter.lessons || chapter.lessons.length === 0)) {
+      console.log('Lessons exist but not populated, trying alternative approach...')
+      
+      // Manually attach lessons to chapters based on chapter ID
+      const chaptersWithLessons = chapters.map(chapter => {
+        const chapterLessons = allLessons.filter(lesson => lesson.chapter.toString() === chapter._id.toString())
+        return {
+          ...chapter,
+          lessons: chapterLessons.sort((a, b) => a.order - b.order)
+        }
+      })
+      
+      course.chapters = chaptersWithLessons
+      console.log('Chapters with manually attached lessons:', chaptersWithLessons)
+    } else {
+      // Add chapters to the course object
+      course.chapters = chapters
+    }
+
     // Debug logging
     console.log('Course found:', course.title)
-    console.log('Chapters count:', course.chapters?.length || 0)
+    console.log('Chapters count:', course.chapters.length)
     console.log('Chapters:', course.chapters)
 
     return NextResponse.json({

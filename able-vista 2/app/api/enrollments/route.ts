@@ -1,111 +1,94 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '../../../lib/db'
-import Enrollment from '../../../models/Enrollment'
+import Enrollment from '@/models/Enrollment'
 
-interface EnrollmentResponse {
-  success: boolean
-  message: string
-  data?: any
-}
-
-// GET /api/enrollments - Get all enrollments
-export async function GET(request: NextRequest): Promise<NextResponse<EnrollmentResponse>> {
+export async function GET(request: NextRequest) {
   try {
     await dbConnect()
-
+    
     const { searchParams } = new URL(request.url)
-    const user = searchParams.get('user')
-    const course = searchParams.get('course')
-    const status = searchParams.get('status')
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '10')
-    const skip = (page - 1) * limit
-
-    // Build filter object
-    const filter: any = {}
-    if (user) filter.user = user
-    if (course) filter.course = course
-    if (status) filter.status = status
-
-    const enrollments = await Enrollment.find(filter)
-      .populate('user', 'name email')
-      .populate('course', 'title description image')
-      .populate('currentLesson', 'title')
-      .skip(skip)
-      .limit(limit)
-      .sort({ enrolledAt: -1 })
-
-    const total = await Enrollment.countDocuments(filter)
-
-    return NextResponse.json({
-      success: true,
-      message: 'Enrollments retrieved successfully',
-      data: {
-        enrollments,
-        pagination: {
-          page,
-          limit,
-          total,
-          pages: Math.ceil(total / limit)
-        }
-      }
-    })
-
+    const userId = searchParams.get('user')
+    const courseId = searchParams.get('course')
+    
+    if (!userId || !courseId) {
+      return NextResponse.json(
+        { success: false, message: 'User ID and Course ID are required' },
+        { status: 400 }
+      )
+    }
+    
+    // Check if enrollment exists
+    const enrollment = await Enrollment.findOne({ user: userId, course: courseId }).lean()
+    
+    if (enrollment) {
+      return NextResponse.json({
+        success: true,
+        message: 'Enrollment found',
+        data: enrollment
+      })
+    } else {
+      return NextResponse.json({
+        success: false,
+        message: 'Enrollment not found',
+        data: null
+      })
+    }
   } catch (error) {
-    console.error('Get enrollments error:', error)
-    return NextResponse.json({
-      success: false,
-      message: 'Failed to retrieve enrollments'
-    }, { status: 500 })
+    console.error('Error checking enrollment:', error)
+    return NextResponse.json(
+      { success: false, message: 'Internal server error' },
+      { status: 500 }
+    )
   }
 }
 
-// POST /api/enrollments - Create a new enrollment
-export async function POST(request: NextRequest): Promise<NextResponse<EnrollmentResponse>> {
+export async function POST(request: NextRequest) {
   try {
     await dbConnect()
-
+    
     const body = await request.json()
     const { user, course } = body
-
-    // Validate required fields
+    
     if (!user || !course) {
-      return NextResponse.json({
-        success: false,
-        message: 'Missing required fields'
-      }, { status: 400 })
+      return NextResponse.json(
+        { success: false, message: 'User ID and Course ID are required' },
+        { status: 400 }
+      )
     }
-
-    // Check if user is already enrolled
+    
+    // Check if enrollment already exists
     const existingEnrollment = await Enrollment.findOne({ user, course })
     if (existingEnrollment) {
-      return NextResponse.json({
-        success: false,
-        message: 'User is already enrolled in this course'
-      }, { status: 400 })
+      return NextResponse.json(
+        { success: false, message: 'User is already enrolled in this course' },
+        { status: 409 }
+      )
     }
-
-    const enrollment = await Enrollment.create({
+    
+    // Create new enrollment
+    const enrollment = new Enrollment({
       user,
       course,
       status: 'active',
       progress: 0,
       completedLessons: [],
       totalTimeSpent: 0,
-      enrolledAt: new Date()
+      enrolledAt: new Date(),
+      lastAccessedAt: new Date()
     })
-
+    
+    await enrollment.save()
+    
     return NextResponse.json({
       success: true,
       message: 'Enrollment created successfully',
       data: enrollment
-    }, { status: 201 })
-
+    })
   } catch (error) {
-    console.error('Create enrollment error:', error)
-    return NextResponse.json({
-      success: false,
-      message: 'Failed to create enrollment'
-    }, { status: 500 })
+    console.error('Error creating enrollment:', error)
+    return NextResponse.json(
+      { success: false, message: 'Internal server error' },
+      { status: 500 }
+    )
   }
 }

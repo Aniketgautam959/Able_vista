@@ -24,6 +24,7 @@ import {
   Settings,
 } from "lucide-react";
 import Link from "next/link";
+import { OnboardingModal } from "@/components/onboarding-modal";
 
 // Mock data for dashboard
 const dashboardData = {
@@ -73,24 +74,119 @@ const dashboardData = {
 };
 
 interface User {
+  _id: string;
   name: string;
+}
+
+interface UserProfile {
+  _id: string;
+  user: string;
+  bio?: string;
+  avatar: string;
+  location?: string;
+  timezone: string;
+  learningGoal?: string;
+  interests: string[];
+  skillLevel: 'beginner' | 'intermediate' | 'advanced';
+  preferredLearningStyle: 'visual' | 'auditory' | 'kinesthetic' | 'reading';
+  stats: {
+    totalCourses: number;
+    completedCourses: number;
+    inProgressCourses: number;
+    totalLessons: number;
+    completedLessons: number;
+    totalHours: number;
+    currentStreak: number;
+    longestStreak: number;
+  };
+}
+
+interface OnboardingData {
+  bio: string;
+  location: string;
+  timezone: string;
+  learningGoal: string;
+  interests: string[];
+  skillLevel: 'beginner' | 'intermediate' | 'advanced';
+  preferredLearningStyle: 'visual' | 'auditory' | 'kinesthetic' | 'reading';
 }
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [creatingProfile, setCreatingProfile] = useState(false);
 
-  // Fetch logged-in user name
+  // Fetch logged-in user and check for profile
   useEffect(() => {
-    const fetchUser = async () => {
+    const fetchUserAndProfile = async () => {
       try {
-        const { data } = await axios.get("/api/auth/showme");
-        setUser(data.user); // expects { user: { name: string } }
+        setLoading(true);
+        
+        // First get the authenticated user
+        const { data: userData } = await axios.get("/api/auth/showme");
+        setUser(userData.user);
+
+        // Then check if user profile exists
+        try {
+          const { data: profileData } = await axios.get(`/api/user-profiles?user=${userData.user._id}`);
+          if (profileData.success) {
+            setUserProfile(profileData.data);
+            setShowOnboarding(false);
+          }
+        } catch (profileError) {
+          // Profile doesn't exist, show onboarding
+          setShowOnboarding(true);
+        }
       } catch (error) {
         console.error("Failed to fetch user:", error);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchUser();
+
+    fetchUserAndProfile();
   }, []);
+
+  // Handle onboarding form submission
+  const handleOnboardingSubmit = async (profileData: OnboardingData) => {
+    try {
+      setCreatingProfile(true);
+      
+      const response = await axios.post("/api/user-profiles", {
+        user: user?._id,
+        ...profileData
+      });
+
+      if (response.data.success) {
+        setUserProfile(response.data.data);
+        setShowOnboarding(false);
+        // Optionally show success message
+      }
+    } catch (error) {
+      console.error("Failed to create user profile:", error);
+      // Optionally show error message
+    } finally {
+      setCreatingProfile(false);
+    }
+  };
+
+  // Close onboarding modal
+  const handleCloseOnboarding = () => {
+    setShowOnboarding(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -126,13 +222,18 @@ export default function DashboardPage() {
             </Button>
             <Avatar className="w-8 h-8">
               <AvatarImage
-                src={dashboardData.user.avatar || "/placeholder.svg"}
+                src={userProfile?.avatar || dashboardData.user.avatar || "/placeholder.svg"}
               />
               <AvatarFallback>
-                {dashboardData.user.name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")}
+                {user?.name
+                  ? user.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                  : dashboardData.user.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
               </AvatarFallback>
             </Avatar>
           </div>
@@ -160,7 +261,7 @@ export default function DashboardPage() {
                     Current Streak
                   </p>
                   <p className="text-2xl font-bold text-primary">
-                    {dashboardData.user.currentStreak} days
+                    {userProfile?.stats.currentStreak || dashboardData.user.currentStreak} days
                   </p>
                 </div>
                 <TrendingUp className="w-8 h-8 text-orange-600" />
@@ -174,7 +275,7 @@ export default function DashboardPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">Total Hours</p>
                   <p className="text-2xl font-bold text-primary">
-                    {dashboardData.user.totalHours}h
+                    {userProfile?.stats.totalHours || dashboardData.user.totalHours}h
                   </p>
                 </div>
                 <Clock className="w-8 h-8 text-blue-600" />
@@ -202,7 +303,9 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Certificates</p>
-                  <p className="text-2xl font-bold text-primary">3</p>
+                  <p className="text-2xl font-bold text-primary">
+                    {userProfile?.stats.completedCourses || 3}
+                  </p>
                 </div>
                 <Award className="w-8 h-8 text-purple-600" />
               </div>
@@ -380,6 +483,14 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Onboarding Modal */}
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onClose={handleCloseOnboarding}
+        onSubmit={handleOnboardingSubmit}
+        loading={creatingProfile}
+      />
     </div>
   );
 }

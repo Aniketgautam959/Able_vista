@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -26,32 +26,66 @@ import {
   CheckCircle,
   Star,
   BarChart3,
+  Loader2,
+  MapPin,
+  User,
+  Brain,
 } from "lucide-react"
 import Link from "next/link"
 
-// Mock user data
-const userData = {
-  id: 1,
-  name: "Alex Johnson",
-  email: "alex.johnson@email.com",
-  avatar: "/student-profile.png",
-  bio: "Passionate full-stack developer and lifelong learner. Currently focusing on modern web technologies and AI integration.",
-  joinDate: "January 2024",
-  location: "San Francisco, CA",
-  timezone: "PST",
-  learningGoal: "Become a Senior Full-Stack Developer",
-  totalCourses: 3,
-  completedCourses: 1,
-  inProgressCourses: 2,
-  totalLessons: 87,
-  completedLessons: 67,
-  totalHours: 124,
-  currentStreak: 12,
-  longestStreak: 28,
-  certificates: 1,
+// API response types
+interface AuthUser {
+  _id: string
+  name: string
+  email: string
+  role: string
+  isEmailVerified: boolean
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
 }
 
-// Mock course data
+interface ShowMeResponse {
+  user: AuthUser
+  error: string | null
+}
+
+interface UserProfile {
+  _id: string
+  user: AuthUser
+  bio: string
+  avatar: string
+  location: string
+  timezone: string
+  learningGoal: string
+  interests: string[]
+  skillLevel: 'beginner' | 'intermediate' | 'advanced'
+  preferredLearningStyle: 'visual' | 'auditory' | 'kinesthetic' | 'reading'
+  preferences: {
+    showProfile: boolean
+    showProgress: boolean
+  }
+  stats: {
+    totalCourses: number
+    completedCourses: number
+    inProgressCourses: number
+    totalLessons: number
+    completedLessons: number
+    totalHours: number
+    currentStreak: number
+    longestStreak: number
+  }
+  createdAt: string
+  updatedAt: string
+}
+
+interface UserProfileApiResponse {
+  success: boolean
+  message: string
+  data: UserProfile
+}
+
+// Mock course data (will be replaced with real API data later)
 const enrolledCourses = [
   {
     id: 2,
@@ -106,31 +140,142 @@ const achievements = [
 
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false)
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [editedProfile, setEditedProfile] = useState({
-    name: userData.name,
-    bio: userData.bio,
-    location: userData.location,
-    learningGoal: userData.learningGoal,
+    name: '',
+    bio: '',
+    location: '',
+    learningGoal: '',
   })
 
+  // Fetch authenticated user and then their profile data
+  useEffect(() => {
+    const fetchUserAndProfile = async () => {
+      try {
+        setLoading(true)
+        
+        // First, get the authenticated user from showme API
+        const authResponse = await fetch('/api/auth/showme')
+        if (!authResponse.ok) {
+          throw new Error('Failed to authenticate user')
+        }
+        
+        const authData: ShowMeResponse = await authResponse.json()
+        if (authData.error || !authData.user) {
+          throw new Error(authData.error || 'User not authenticated')
+        }
+        
+        const userId = authData.user._id
+        
+        // Then, fetch the user profile using the user ID
+        const profileResponse = await fetch(`/api/user-profiles?user=${userId}`)
+        if (!profileResponse.ok) {
+          if (profileResponse.status === 404) {
+            // User profile doesn't exist yet, show message
+            setError('User profile not found. Please complete your profile setup.')
+          } else {
+            throw new Error('Failed to fetch user profile')
+          }
+          return
+        }
+        
+        const profileData: UserProfileApiResponse = await profileResponse.json()
+        if (profileData.success) {
+          setUserProfile(profileData.data)
+          // Initialize edited profile with current data
+          setEditedProfile({
+            name: profileData.data.user.name,
+            bio: profileData.data.bio,
+            location: profileData.data.location,
+            learningGoal: profileData.data.learningGoal,
+          })
+        } else {
+          setError(profileData.message || 'Failed to fetch user profile')
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUserAndProfile()
+  }, [])
+
   const handleSaveProfile = () => {
-    // In a real app, this would save to the backend
+    // TODO: Implement profile update API call
     setIsEditing(false)
   }
 
   const handleCancelEdit = () => {
-    setEditedProfile({
-      name: userData.name,
-      bio: userData.bio,
-      location: userData.location,
-      learningGoal: userData.learningGoal,
-    })
+    if (userProfile) {
+      setEditedProfile({
+        name: userProfile.user.name,
+        bio: userProfile.bio,
+        location: userProfile.location,
+        learningGoal: userProfile.learningGoal,
+      })
+    }
     setIsEditing(false)
   }
 
-  const completionRate = Math.round((userData.completedLessons / userData.totalLessons) * 100)
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Loading profile...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error || !userProfile) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <User className="w-8 h-8 text-destructive" />
+          </div>
+          <h3 className="text-lg font-semibold text-foreground mb-2">
+            {error?.includes('not found') ? 'Profile Not Found' : 'Error loading profile'}
+          </h3>
+          <p className="text-muted-foreground mb-4">
+            {error || 'Profile not found'}
+          </p>
+          <div className="space-y-2">
+            {error?.includes('not found') ? (
+              <Button asChild>
+                <Link href="/dashboard">
+                  <User className="w-4 h-4 mr-2" />
+                  Complete Profile Setup
+                </Link>
+              </Button>
+            ) : (
+              <Button onClick={() => window.location.reload()}>Try Again</Button>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const completionRate = userProfile.stats.totalLessons > 0 
+    ? Math.round((userProfile.stats.completedLessons / userProfile.stats.totalLessons) * 100)
+    : 0
+
   const inProgressCourses = enrolledCourses.filter((course) => course.status === "in-progress")
   const completedCourses = enrolledCourses.filter((course) => course.status === "completed")
+
+  // Format join date
+  const joinDate = new Date(userProfile.createdAt).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long'
+  })
 
   return (
     <div className="min-h-screen bg-background">
@@ -138,11 +283,11 @@ export default function ProfilePage() {
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link
-            href="/courses"
+            href="/dashboard"
             className="flex items-center space-x-2 text-foreground hover:text-primary transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span>Back to Courses</span>
+            <span>Back to Dashboard</span>
           </Link>
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
@@ -160,9 +305,9 @@ export default function ProfilePage() {
             <CardContent className="p-8">
               <div className="flex flex-col md:flex-row items-start md:items-center space-y-6 md:space-y-0 md:space-x-8">
                 <Avatar className="w-24 h-24">
-                  <AvatarImage src={userData.avatar || "/placeholder.svg"} />
+                  <AvatarImage src={userProfile.avatar || "/placeholder.svg"} />
                   <AvatarFallback className="text-2xl">
-                    {userData.name
+                    {userProfile.user.name
                       .split(" ")
                       .map((n) => n[0])
                       .join("")}
@@ -225,27 +370,57 @@ export default function ProfilePage() {
                   ) : (
                     <div>
                       <div className="flex items-center justify-between mb-4">
-                        <h1 className="text-3xl font-bold text-foreground">{userData.name}</h1>
+                        <h1 className="text-3xl font-bold text-foreground">{userProfile.user.name}</h1>
                         <Button variant="outline" onClick={() => setIsEditing(true)}>
                           <Edit className="w-4 h-4 mr-2" />
                           Edit Profile
                         </Button>
                       </div>
-                      <p className="text-lg text-muted-foreground mb-4">{userData.bio}</p>
+                      <p className="text-lg text-muted-foreground mb-4">{userProfile.bio}</p>
                       <div className="grid md:grid-cols-3 gap-4 text-sm text-muted-foreground">
                         <div className="flex items-center">
                           <Calendar className="w-4 h-4 mr-2" />
-                          Joined {userData.joinDate}
+                          Joined {joinDate}
+                        </div>
+                        <div className="flex items-center">
+                          <MapPin className="w-4 h-4 mr-2" />
+                          {userProfile.location}
                         </div>
                         <div className="flex items-center">
                           <Target className="w-4 h-4 mr-2" />
-                          {userData.location}
-                        </div>
-                        <div className="flex items-center">
-                          <Trophy className="w-4 h-4 mr-2" />
-                          Goal: {userData.learningGoal}
+                          Goal: {userProfile.learningGoal}
                         </div>
                       </div>
+
+                      {/* Additional Profile Info */}
+                      <div className="mt-6 grid md:grid-cols-2 gap-4">
+                        <div className="flex items-center space-x-2">
+                          <Brain className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">
+                            Skill Level: <span className="text-foreground font-medium capitalize">{userProfile.skillLevel}</span>
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <User className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">
+                            Learning Style: <span className="text-foreground font-medium capitalize">{userProfile.preferredLearningStyle}</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Interests */}
+                      {userProfile.interests.length > 0 && (
+                        <div className="mt-4">
+                          <Label className="text-sm font-medium">Interests</Label>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {userProfile.interests.map((interest, index) => (
+                              <Badge key={index} variant="secondary">
+                                {interest}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -261,7 +436,7 @@ export default function ProfilePage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Courses Completed</p>
-                  <p className="text-2xl font-bold text-primary">{userData.completedCourses}</p>
+                  <p className="text-2xl font-bold text-primary">{userProfile.stats.completedCourses}</p>
                 </div>
                 <CheckCircle className="w-8 h-8 text-green-600" />
               </div>
@@ -273,7 +448,7 @@ export default function ProfilePage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">In Progress</p>
-                  <p className="text-2xl font-bold text-primary">{userData.inProgressCourses}</p>
+                  <p className="text-2xl font-bold text-primary">{userProfile.stats.inProgressCourses}</p>
                 </div>
                 <Play className="w-8 h-8 text-blue-600" />
               </div>
@@ -285,7 +460,7 @@ export default function ProfilePage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Learning Hours</p>
-                  <p className="text-2xl font-bold text-primary">{userData.totalHours}</p>
+                  <p className="text-2xl font-bold text-primary">{userProfile.stats.totalHours}</p>
                 </div>
                 <Clock className="w-8 h-8 text-orange-600" />
               </div>
@@ -297,7 +472,7 @@ export default function ProfilePage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Current Streak</p>
-                  <p className="text-2xl font-bold text-primary">{userData.currentStreak} days</p>
+                  <p className="text-2xl font-bold text-primary">{userProfile.stats.currentStreak} days</p>
                 </div>
                 <TrendingUp className="w-8 h-8 text-purple-600" />
               </div>
@@ -324,21 +499,21 @@ export default function ProfilePage() {
                     </div>
                     <Progress value={completionRate} className="h-3" />
                     <div className="text-xs text-muted-foreground mt-1">
-                      {userData.completedLessons} of {userData.totalLessons} lessons completed
+                      {userProfile.stats.completedLessons} of {userProfile.stats.totalLessons} lessons completed
                     </div>
                   </div>
 
                   <div className="grid md:grid-cols-3 gap-4 text-center">
                     <div className="p-4 bg-muted/30 rounded-lg">
-                      <div className="text-2xl font-bold text-primary">{userData.totalCourses}</div>
+                      <div className="text-2xl font-bold text-primary">{userProfile.stats.totalCourses}</div>
                       <div className="text-sm text-muted-foreground">Total Enrolled</div>
                     </div>
                     <div className="p-4 bg-muted/30 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600">{userData.completedCourses}</div>
+                      <div className="text-2xl font-bold text-green-600">{userProfile.stats.completedCourses}</div>
                       <div className="text-sm text-muted-foreground">Completed</div>
                     </div>
                     <div className="p-4 bg-muted/30 rounded-lg">
-                      <div className="text-2xl font-bold text-blue-600">{userData.inProgressCourses}</div>
+                      <div className="text-2xl font-bold text-blue-600">{userProfile.stats.inProgressCourses}</div>
                       <div className="text-sm text-muted-foreground">In Progress</div>
                     </div>
                   </div>

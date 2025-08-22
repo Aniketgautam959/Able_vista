@@ -1,63 +1,71 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Star, BookOpen, Search, Filter, Clock, Users, Play, CheckCircle, ArrowLeft } from "lucide-react"
+import { Star, BookOpen, Search, Filter, Clock, Users, Play, CheckCircle, ArrowLeft, Loader2 } from "lucide-react"
 import Link from "next/link"
 
-// Mock course data
-const courses = [
-  {
-    id: 1,
-    title: "Full-Stack Web Development",
-    description: "Master modern web development with React, Node.js, and databases.",
-    category: "Web Development",
-    instructor: "Sarah Johnson",
-    duration: "12 weeks",
-    students: 2340,
-    rating: 4.9,
-    price: 99,
-    level: "Beginner",
-    enrolled: false,
-    progress: 0,
-    image: "from-blue-500 to-purple-600",
-  },
-  {
-    id: 2,
-    title: "AI & Machine Learning",
-    description: "Dive into artificial intelligence and build intelligent applications.",
-    category: "AI",
-    instructor: "Dr. Michael Chen",
-    duration: "16 weeks",
-    students: 1890,
-    rating: 4.8,
-    price: 149,
-    level: "Intermediate",
-    enrolled: true,
-    progress: 35,
-    image: "from-green-500 to-teal-600",
-  },
-  {
-    id: 3,
-    title: "UI/UX Design Fundamentals",
-    description: "Create beautiful and user-friendly interfaces with modern design principles.",
-    category: "Design",
-    instructor: "Alex Thompson",
-    duration: "10 weeks",
-    students: 2156,
-    rating: 4.9,
-    price: 89,
-    level: "Beginner",
-    enrolled: true,
-    progress: 78,
-    image: "from-pink-500 to-rose-600",
-  },
-]
+// API response types
+interface Instructor {
+  _id: string
+  title: string
+  avatar: string
+}
+
+interface Chapter {
+  _id: string
+  title: string
+  description: string
+  course: string
+  order: number
+  duration: string
+  lessons: any[]
+  isPublished: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+interface Course {
+  _id: string
+  title: string
+  description: string
+  category: string
+  instructor: Instructor
+  level: string
+  price: number
+  duration: string
+  estimatedHours: number
+  image: string
+  skills: string[]
+  requirements: string[]
+  whatYouLearn: string[]
+  rating: number
+  totalReviews: number
+  totalStudents: number
+  isPublished: boolean
+  chapters: Chapter[]
+  createdAt: string
+  updatedAt: string
+}
+
+interface ApiResponse {
+  success: boolean
+  message: string
+  data: {
+    courses: Course[]
+    pagination: {
+      page: number
+      limit: number
+      total: number
+      pages: number
+    }
+  }
+}
 
 const categories = ["All", "Web Development", "AI", "Design"]
 const levels = ["All", "Beginner", "Intermediate", "Advanced"]
@@ -66,17 +74,73 @@ export default function CoursesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [selectedLevel, setSelectedLevel] = useState("All")
+  const [courses, setCourses] = useState<Course[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Fetch courses from API
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch('/api/courses/?all=true')
+        if (!response.ok) {
+          throw new Error('Failed to fetch courses')
+        }
+        const data: ApiResponse = await response.json()
+        if (data.success) {
+          setCourses(data.data.courses)
+        } else {
+          setError(data.message || 'Failed to fetch courses')
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCourses()
+  }, [])
 
   const filteredCourses = courses.filter((course) => {
     const matchesSearch =
       course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       course.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      course.instructor.toLowerCase().includes(searchTerm.toLowerCase())
+      course.instructor.title.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesCategory = selectedCategory === "All" || course.category === selectedCategory
     const matchesLevel = selectedLevel === "All" || course.level === selectedLevel
 
     return matchesSearch && matchesCategory && matchesLevel
   })
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Loading courses...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <BookOpen className="w-8 h-8 text-destructive" />
+          </div>
+          <h3 className="text-lg font-semibold text-foreground mb-2">Error loading courses</h3>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()}>Try Again</Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -175,7 +239,7 @@ export default function CoursesPage() {
         {/* Course Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCourses.map((course) => (
-            <Card key={course.id} className="border-border hover:shadow-lg transition-shadow group">
+            <Card key={course._id} className="border-border hover:shadow-lg transition-shadow group">
               <div className={`aspect-video bg-gradient-to-br ${course.image} rounded-t-lg relative overflow-hidden`}>
                 <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
                 <div className="absolute top-4 left-4">
@@ -196,7 +260,7 @@ export default function CoursesPage() {
                     {course.level}
                   </Badge>
                 </div>
-                {course.enrolled && (
+                {course.isPublished && (
                   <div className="absolute bottom-4 right-4">
                     <div className="bg-white/90 rounded-full p-2">
                       <CheckCircle className="w-5 h-5 text-green-600" />
@@ -209,13 +273,15 @@ export default function CoursesPage() {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center">
                     <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-sm text-muted-foreground ml-1">{course.rating}</span>
+                    <span className="text-sm text-muted-foreground ml-1">
+                      {course.rating > 0 ? course.rating.toFixed(1) : 'New'}
+                    </span>
                   </div>
                   <span className="text-lg font-bold text-primary">${course.price}</span>
                 </div>
                 <CardTitle className="line-clamp-2">{course.title}</CardTitle>
                 <CardDescription className="line-clamp-2">{course.description}</CardDescription>
-                <div className="text-sm text-muted-foreground">by {course.instructor}</div>
+                <div className="text-sm text-muted-foreground">by {course.instructor.title}</div>
               </CardHeader>
 
               <CardContent>
@@ -226,40 +292,47 @@ export default function CoursesPage() {
                   </div>
                   <div className="flex items-center">
                     <Users className="w-4 h-4 mr-1" />
-                    {course.students.toLocaleString()} students
+                    {course.totalStudents.toLocaleString()} students
                   </div>
                 </div>
 
-                {course.enrolled && course.progress > 0 ? (
-                  <div className="space-y-2 mb-4">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Progress</span>
-                      <span className="text-foreground font-medium">{course.progress}%</span>
+                {/* Skills */}
+                {course.skills.length > 0 && (
+                  <div className="mb-4">
+                    <div className="text-sm text-muted-foreground mb-2">Skills you'll learn:</div>
+                    <div className="flex flex-wrap gap-1">
+                      {course.skills.slice(0, 3).map((skill, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {skill}
+                        </Badge>
+                      ))}
+                      {course.skills.length > 3 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{course.skills.length - 3} more
+                        </Badge>
+                      )}
                     </div>
-                    <Progress value={course.progress} className="h-2" />
                   </div>
-                ) : null}
+                )}
 
                 <div className="flex gap-2">
-                  {course.enrolled ? (
-                    <Button className="flex-1" asChild>
-                      <Link href={`/courses/${course.id}`}>
-                        <Play className="w-4 h-4 mr-2" />
-                        Continue Learning
-                      </Link>
-                    </Button>
-                  ) : (
-                    <>
-                      <Button className="flex-1" asChild>
-                        <Link href={`/courses/${course.id}`}>Enroll Now</Link>
-                      </Button>
-                      <Button variant="outline" size="icon" asChild>
-                        <Link href={`/courses/${course.id}`}>
-                          <Play className="w-4 h-4" />
-                        </Link>
-                      </Button>
-                    </>
-                  )}
+                  <Button className="flex-1" asChild>
+                    <Link href={`/courses/${course._id}`}>
+                      {course.isPublished ? (
+                        <>
+                          <Play className="w-4 h-4 mr-2" />
+                          Start Learning
+                        </>
+                      ) : (
+                        'View Details'
+                      )}
+                    </Link>
+                  </Button>
+                  <Button variant="outline" size="icon" asChild>
+                    <Link href={`/courses/${course._id}`}>
+                      <Play className="w-4 h-4" />
+                    </Link>
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -267,7 +340,7 @@ export default function CoursesPage() {
         </div>
 
         {/* No Results */}
-        {filteredCourses.length === 0 && (
+        {filteredCourses.length === 0 && courses.length > 0 && (
           <div className="text-center py-12">
             <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
               <Search className="w-8 h-8 text-muted-foreground" />
@@ -286,6 +359,19 @@ export default function CoursesPage() {
             >
               Clear Filters
             </Button>
+          </div>
+        )}
+
+        {/* No Courses Available */}
+        {courses.length === 0 && !loading && !error && (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+              <BookOpen className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground mb-2">No courses available</h3>
+            <p className="text-muted-foreground">
+              Check back later for new courses or contact support for assistance.
+            </p>
           </div>
         )}
       </div>

@@ -8,7 +8,7 @@ interface UserProfileResponse {
   data?: any
 }
 
-// GET /api/user-profiles - Get all user profiles
+// GET /api/user-profiles - Get all user profiles or get by user ID
 export async function GET(request: NextRequest): Promise<NextResponse<UserProfileResponse>> {
   try {
     await dbConnect()
@@ -21,9 +21,28 @@ export async function GET(request: NextRequest): Promise<NextResponse<UserProfil
     const limit = parseInt(searchParams.get('limit') || '10')
     const skip = (page - 1) * limit
 
-    // Build filter object
+    // If user parameter is provided, get profile for that specific user
+    if (user) {
+      const userProfile = await UserProfile.findOne({ user })
+        .populate('user', 'name email')
+        .lean()
+      
+      if (!userProfile) {
+        return NextResponse.json({
+          success: false,
+          message: 'User profile not found'
+        }, { status: 404 })
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'User profile retrieved successfully',
+        data: userProfile
+      })
+    }
+
+    // Build filter object for multiple profiles
     const filter: any = {}
-    if (user) filter.user = user
     if (skillLevel) filter.skillLevel = skillLevel
     if (learningStyle) filter.preferredLearningStyle = learningStyle
 
@@ -32,6 +51,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<UserProfil
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 })
+      .lean()
 
     const total = await UserProfile.countDocuments(filter)
 
