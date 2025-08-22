@@ -2,7 +2,7 @@
 
 import { useState, ChangeEvent, FormEvent } from "react";
 import Link from "next/link";
-import { Eye, EyeOff, Mail } from "lucide-react";
+import { Eye, EyeOff, Mail, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -74,18 +74,18 @@ export default function LoginPage(): JSX.Element {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4 w-screen">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 w-screen">
+      <Card className="w-full max-w-md border-border shadow-lg">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg">
-              <img src="/icon.png" alt="" className="rounded-lg" />
+            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+              <BookOpen className="w-6 h-6 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold">MailBoard</span>
+            <span className="text-xl font-bold text-foreground">Able Vista</span>
           </div>
-          <CardTitle className="text-2xl">Welcome back</CardTitle>
-          <CardDescription>
-            Sign in to your account to continue managing your emails
+          <CardTitle className="text-2xl text-foreground">Welcome back</CardTitle>
+          <CardDescription className="text-muted-foreground">
+            Sign in to your account to continue your learning journey
           </CardDescription>
         </CardHeader>
 
@@ -98,7 +98,7 @@ export default function LoginPage(): JSX.Element {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-foreground">Email</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -106,7 +106,7 @@ export default function LoginPage(): JSX.Element {
                   name="email"
                   type="email"
                   placeholder="john@example.com"
-                  className="pl-10"
+                  className="pl-10 bg-input border-border"
                   value={formData.email}
                   onChange={handleChange}
                   required
@@ -116,10 +116,10 @@ export default function LoginPage(): JSX.Element {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="text-foreground">Password</Label>
                 <Link
                   href="/forgot-password"
-                  className="text-sm text-blue-600 hover:underline">
+                  className="text-sm text-primary hover:underline">
                   Forgot password?
                 </Link>
               </div>
@@ -129,6 +129,7 @@ export default function LoginPage(): JSX.Element {
                   name="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
+                  className="bg-input border-border"
                   value={formData.password}
                   onChange={handleChange}
                   required
@@ -150,7 +151,7 @@ export default function LoginPage(): JSX.Element {
 
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+              className="w-full"
               disabled={isLoading}>
               {isLoading ? (
                 <div className="flex items-center">
@@ -179,11 +180,11 @@ export default function LoginPage(): JSX.Element {
             </Button>
           </form>
 
-          <div className="text-center text-sm">
+          <div className="text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{" "}
             <Link
               href="/signup"
-              className="text-blue-600 hover:underline font-medium">
+              className="text-primary hover:underline font-medium">
               Sign up
             </Link>
           </div>

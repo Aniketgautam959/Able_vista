@@ -5,7 +5,6 @@ import axios, { AxiosError } from "axios";
 import { useEffect, useState, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Inter } from "next/font/google";
-import { ThemeProvider } from "@/components/theme-provider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -49,22 +48,18 @@ export default function LoginLayout({
 
   if (isLoading || isAuthenticated) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center w-screen">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center w-screen">
         <div className="h-full w-full flex items-center justify-center">
-          <div className="animate-spin rounded-full h-6 w-6 border-2 border-muted-foreground border-t-transparent" />
+          <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-gray-900" />
         </div>
       </div>
     );
   }
 
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="dark"
-      enableSystem
-      disableTransitionOnChange>
+    <div className={`min-h-screen bg-gray-50 ${inter.className}`}>
       {children}
-    </ThemeProvider>
+    </div>
   );
 }
 
