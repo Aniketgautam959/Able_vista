@@ -1,0 +1,464 @@
+{
+  "baseUrl": "http://localhost:3000",
+  "apis": [
+    {
+      "name": "Courses",
+      "routes": [
+        {
+          "method": "GET",
+          "url": "/api/courses",
+          "description": "Get all courses",
+          "queryParams": {
+            "category": "Web Development",
+            "level": "Beginner",
+            "instructor": "instructor_id",
+            "page": "1",
+            "limit": "10"
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/api/courses",
+          "description": "Create a new course",
+          "body": {
+            "title": "React Fundamentals",
+            "description": "Learn React basics",
+            "category": "Web Development",
+            "instructor": "instructor_id",
+            "level": "Beginner",
+            "price": 49.99,
+            "duration": "8 weeks",
+            "estimatedHours": 40,
+            "skills": ["JavaScript", "React", "JSX"],
+            "requirements": ["Basic HTML", "Basic CSS"],
+            "whatYouLearn": ["React Components", "State Management"]
+          }
+        },
+        {
+          "method": "GET",
+          "url": "/api/courses/:id",
+          "description": "Get course by ID"
+        },
+        {
+          "method": "PUT",
+          "url": "/api/courses/:id",
+          "description": "Update course",
+          "body": {
+            "title": "Updated React Course",
+            "isPublished": true
+          }
+        },
+        {
+          "method": "DELETE",
+          "url": "/api/courses/:id",
+          "description": "Delete course"
+        }
+      ]
+    },
+    {
+      "name": "Chapters",
+      "routes": [
+        {
+          "method": "GET",
+          "url": "/api/chapters",
+          "description": "Get all chapters",
+          "queryParams": {
+            "course": "course_id",
+            "page": "1",
+            "limit": "10"
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/api/chapters",
+          "description": "Create a new chapter",
+          "body": {
+            "title": "Introduction to React",
+            "description": "Learn the basics of React",
+            "course": "course_id",
+            "order": 1,
+            "duration": "2 hours"
+          }
+        },
+        {
+          "method": "GET",
+          "url": "/api/chapters/:id",
+          "description": "Get chapter by ID"
+        },
+        {
+          "method": "PUT",
+          "url": "/api/chapters/:id",
+          "description": "Update chapter",
+          "body": {
+            "title": "Updated Chapter Title",
+            "isPublished": true
+          }
+        },
+        {
+          "method": "DELETE",
+          "url": "/api/chapters/:id",
+          "description": "Delete chapter"
+        }
+      ]
+    },
+    {
+      "name": "Lessons",
+      "routes": [
+        {
+          "method": "GET",
+          "url": "/api/lessons",
+          "description": "Get all lessons",
+          "queryParams": {
+            "course": "course_id",
+            "chapter": "chapter_id",
+            "type": "video",
+            "page": "1",
+            "limit": "10"
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/api/lessons",
+          "description": "Create a new lesson",
+          "body": {
+            "title": "React Components",
+            "description": "Learn about React components",
+            "chapter": "chapter_id",
+            "course": "course_id",
+            "order": 1,
+            "type": "video",
+            "duration": "45 minutes",
+            "durationMinutes": 45,
+            "content": {
+              "videoUrl": "https://example.com/video.mp4",
+              "textContent": "Lesson content here"
+            }
+          }
+        },
+        {
+          "method": "GET",
+          "url": "/api/lessons/:id",
+          "description": "Get lesson by ID"
+        },
+        {
+          "method": "PUT",
+          "url": "/api/lessons/:id",
+          "description": "Update lesson",
+          "body": {
+            "title": "Updated Lesson Title",
+            "isPublished": true
+          }
+        },
+        {
+          "method": "DELETE",
+          "url": "/api/lessons/:id",
+          "description": "Delete lesson"
+        }
+      ]
+    },
+    {
+      "name": "Instructors",
+      "routes": [
+        {
+          "method": "GET",
+          "url": "/api/instructors",
+          "description": "Get all instructors",
+          "queryParams": {
+            "expertise": "Web Development",
+            "verified": "true",
+            "page": "1",
+            "limit": "10"
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/api/instructors",
+          "description": "Create a new instructor",
+          "body": {
+            "user": "user_id",
+            "title": "Senior Web Developer",
+            "company": "Tech Corp",
+            "bio": "Experienced web developer",
+            "expertise": ["React", "Node.js", "MongoDB"],
+            "experience": "5+ years"
+          }
+        },
+        {
+          "method": "GET",
+          "url": "/api/instructors/:id",
+          "description": "Get instructor by ID"
+        },
+        {
+          "method": "PUT",
+          "url": "/api/instructors/:id",
+          "description": "Update instructor",
+          "body": {
+            "title": "Updated Title",
+            "isVerified": true
+          }
+        },
+        {
+          "method": "DELETE",
+          "url": "/api/instructors/:id",
+          "description": "Delete instructor"
+        }
+      ]
+    },
+    {
+      "name": "Enrollments",
+      "routes": [
+        {
+          "method": "GET",
+          "url": "/api/enrollments",
+          "description": "Get all enrollments",
+          "queryParams": {
+            "user": "user_id",
+            "course": "course_id",
+            "status": "active",
+            "page": "1",
+            "limit": "10"
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/api/enrollments",
+          "description": "Create a new enrollment",
+          "body": {
+            "user": "user_id",
+            "course": "course_id"
+          }
+        },
+        {
+          "method": "GET",
+          "url": "/api/enrollments/:id",
+          "description": "Get enrollment by ID"
+        },
+        {
+          "method": "PUT",
+          "url": "/api/enrollments/:id",
+          "description": "Update enrollment",
+          "body": {
+            "status": "completed",
+            "currentLesson": "lesson_id"
+          }
+        },
+        {
+          "method": "DELETE",
+          "url": "/api/enrollments/:id",
+          "description": "Delete enrollment"
+        }
+      ]
+    },
+    {
+      "name": "Progress",
+      "routes": [
+        {
+          "method": "GET",
+          "url": "/api/progress",
+          "description": "Get all progress records",
+          "queryParams": {
+            "user": "user_id",
+            "course": "course_id",
+            "lesson": "lesson_id",
+            "status": "completed",
+            "page": "1",
+            "limit": "10"
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/api/progress",
+          "description": "Create a new progress record",
+          "body": {
+            "user": "user_id",
+            "course": "course_id",
+            "lesson": "lesson_id",
+            "status": "in_progress",
+            "completionPercentage": 50,
+            "timeSpent": 1200
+          }
+        },
+        {
+          "method": "GET",
+          "url": "/api/progress/:id",
+          "description": "Get progress by ID"
+        },
+        {
+          "method": "PUT",
+          "url": "/api/progress/:id",
+          "description": "Update progress",
+          "body": {
+            "status": "completed",
+            "completionPercentage": 100
+          }
+        },
+        {
+          "method": "DELETE",
+          "url": "/api/progress/:id",
+          "description": "Delete progress"
+        }
+      ]
+    },
+    {
+      "name": "Reviews",
+      "routes": [
+        {
+          "method": "GET",
+          "url": "/api/reviews",
+          "description": "Get all reviews",
+          "queryParams": {
+            "course": "course_id",
+            "instructor": "instructor_id",
+            "user": "user_id",
+            "rating": "5",
+            "page": "1",
+            "limit": "10"
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/api/reviews",
+          "description": "Create a new review",
+          "body": {
+            "user": "user_id",
+            "course": "course_id",
+            "instructor": "instructor_id",
+            "rating": 5,
+            "title": "Great Course!",
+            "comment": "This course was very helpful and well-structured."
+          }
+        },
+        {
+          "method": "GET",
+          "url": "/api/reviews/:id",
+          "description": "Get review by ID"
+        },
+        {
+          "method": "PUT",
+          "url": "/api/reviews/:id",
+          "description": "Update review",
+          "body": {
+            "rating": 4,
+            "comment": "Updated comment"
+          }
+        },
+        {
+          "method": "DELETE",
+          "url": "/api/reviews/:id",
+          "description": "Delete review"
+        }
+      ]
+    },
+    {
+      "name": "User Profiles",
+      "routes": [
+        {
+          "method": "GET",
+          "url": "/api/user-profiles",
+          "description": "Get all user profiles",
+          "queryParams": {
+            "user": "user_id",
+            "skillLevel": "beginner",
+            "learningStyle": "visual",
+            "page": "1",
+            "limit": "10"
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/api/user-profiles",
+          "description": "Create a new user profile",
+          "body": {
+            "user": "user_id",
+            "bio": "Learning web development",
+            "location": "New York",
+            "timezone": "America/New_York",
+            "learningGoal": "Become a full-stack developer",
+            "interests": ["Web Development", "JavaScript"],
+            "skillLevel": "beginner",
+            "preferredLearningStyle": "visual"
+          }
+        },
+        {
+          "method": "GET",
+          "url": "/api/user-profiles/:id",
+          "description": "Get user profile by ID"
+        },
+        {
+          "method": "PUT",
+          "url": "/api/user-profiles/:id",
+          "description": "Update user profile",
+          "body": {
+            "bio": "Updated bio",
+            "skillLevel": "intermediate"
+          }
+        },
+        {
+          "method": "DELETE",
+          "url": "/api/user-profiles/:id",
+          "description": "Delete user profile"
+        }
+      ]
+    },
+    {
+      "name": "Feedback",
+      "routes": [
+        {
+          "method": "GET",
+          "url": "/api/feedback",
+          "description": "Get all feedback",
+          "queryParams": {
+            "type": "bug_report",
+            "category": "technical_issue",
+            "status": "open",
+            "priority": "high",
+            "page": "1",
+            "limit": "10"
+          }
+        },
+        {
+          "method": "POST",
+          "url": "/api/feedback",
+          "description": "Create a new feedback",
+          "body": {
+            "user": "user_id",
+            "type": "bug_report",
+            "relatedTo": {
+              "course": "course_id"
+            },
+            "title": "Video not playing",
+            "description": "The video lesson is not loading properly",
+            "category": "technical_issue",
+            "priority": "high"
+          }
+        },
+        {
+          "method": "GET",
+          "url": "/api/feedback/:id",
+          "description": "Get feedback by ID"
+        },
+        {
+          "method": "PUT",
+          "url": "/api/feedback/:id",
+          "description": "Update feedback",
+          "body": {
+            "status": "in_progress",
+            "priority": "medium"
+          }
+        },
+        {
+          "method": "DELETE",
+          "url": "/api/feedback/:id",
+          "description": "Delete feedback"
+        }
+      ]
+    }
+  ],
+  "notes": {
+    "baseUrl": "Change this to your actual server URL",
+    "authentication": "Add Authorization header with Bearer token if required",
+    "pathParams": "Replace :id with actual IDs when testing",
+    "queryParams": "All query parameters are optional",
+    "pagination": "Use page and limit for paginated results"
+  }
+}
