@@ -16,7 +16,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { useRouter } from "next/navigation";
 import { loginUser } from "@/services/api/auth/index";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 interface FormData {
   email: string;
@@ -74,17 +74,17 @@ export default function LoginPage(): JSX.Element {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4 w-screen">
-      <Card className="w-full max-w-md border-border shadow-lg">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4 w-screen">
+      <Card className="w-full max-w-md border border-gray-200 shadow-lg">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <BookOpen className="w-6 h-6 text-primary-foreground" />
+            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+              <BookOpen className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xl font-bold text-foreground">Able Vista</span>
+            <span className="text-xl font-bold text-gray-900">Able Vista</span>
           </div>
-          <CardTitle className="text-2xl text-foreground">Welcome back</CardTitle>
-          <CardDescription className="text-muted-foreground">
+          <CardTitle className="text-2xl text-gray-900">Welcome back</CardTitle>
+          <CardDescription className="text-gray-600">
             Sign in to your account to continue your learning journey
           </CardDescription>
         </CardHeader>
@@ -98,15 +98,15 @@ export default function LoginPage(): JSX.Element {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-foreground">Email</Label>
+              <Label htmlFor="email" className="text-gray-700">Email</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <Input
                   id="email"
                   name="email"
                   type="email"
                   placeholder="john@example.com"
-                  className="pl-10 bg-input border-border"
+                  className="pl-10 bg-white border-gray-300"
                   value={formData.email}
                   onChange={handleChange}
                   required
@@ -116,10 +116,10 @@ export default function LoginPage(): JSX.Element {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-foreground">Password</Label>
+                <Label htmlFor="password" className="text-gray-700">Password</Label>
                 <Link
                   href="/forgot-password"
-                  className="text-sm text-primary hover:underline">
+                  className="text-sm text-blue-600 hover:underline">
                   Forgot password?
                 </Link>
               </div>
@@ -129,7 +129,7 @@ export default function LoginPage(): JSX.Element {
                   name="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
-                  className="bg-input border-border"
+                  className="bg-white border-gray-300"
                   value={formData.password}
                   onChange={handleChange}
                   required
@@ -141,9 +141,9 @@ export default function LoginPage(): JSX.Element {
                   className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}>
                   {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    <EyeOff className="h-4 w-4 text-gray-400" />
                   ) : (
-                    <Eye className="h-4 w-4 text-muted-foreground" />
+                    <Eye className="h-4 w-4 text-gray-400" />
                   )}
                 </Button>
               </div>
@@ -151,7 +151,7 @@ export default function LoginPage(): JSX.Element {
 
             <Button
               type="submit"
-              className="w-full"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
               disabled={isLoading}>
               {isLoading ? (
                 <div className="flex items-center">
@@ -180,11 +180,11 @@ export default function LoginPage(): JSX.Element {
             </Button>
           </form>
 
-          <div className="text-center text-sm text-muted-foreground">
+          <div className="text-center text-sm text-gray-600">
             Don&apos;t have an account?{" "}
             <Link
               href="/signup"
-              className="text-primary hover:underline font-medium">
+              className="text-blue-600 hover:underline font-medium">
               Sign up
             </Link>
           </div>

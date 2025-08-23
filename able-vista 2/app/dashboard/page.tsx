@@ -22,6 +22,7 @@ import {
   Calendar,
   Bell,
   Settings,
+  LogOut,
 } from "lucide-react";
 import Link from "next/link";
 import { OnboardingModal } from "@/components/onboarding-modal";
@@ -177,6 +178,21 @@ export default function DashboardPage() {
     setShowOnboarding(false);
   };
 
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      const response = await axios.post("/api/auth/logout");
+      if (response.status === 200) {
+        // Redirect to login page
+        window.location.href = "/login";
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Still redirect to login page even if logout fails
+      window.location.href = "/login";
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -219,6 +235,15 @@ export default function DashboardPage() {
             </Button>
             <Button variant="ghost" size="icon">
               <Settings className="w-5 h-5" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={handleLogout}
+              title="Logout"
+              className="hover:bg-destructive/10 hover:text-destructive"
+            >
+              <LogOut className="w-5 h-5" />
             </Button>
             <Avatar className="w-8 h-8">
               <AvatarImage

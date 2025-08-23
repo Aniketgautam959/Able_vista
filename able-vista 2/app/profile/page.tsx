@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import axios from "axios"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -30,6 +31,7 @@ import {
   MapPin,
   User,
   Brain,
+  LogOut,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -221,6 +223,21 @@ export default function ProfilePage() {
     setIsEditing(false)
   }
 
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      const response = await axios.post("/api/auth/logout");
+      if (response.status === 200) {
+        // Redirect to login page
+        window.location.href = "/login";
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Still redirect to login page even if logout fails
+      window.location.href = "/login";
+    }
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -294,6 +311,17 @@ export default function ProfilePage() {
               <BookOpen className="w-5 h-5 text-primary-foreground" />
             </div>
             <span className="text-xl font-bold text-foreground">Able Vista</span>
+          </div>
+          <div className="flex items-center space-x-3">
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={handleLogout}
+              title="Logout"
+              className="hover:bg-destructive/10 hover:text-destructive"
+            >
+              <LogOut className="w-5 h-5" />
+            </Button>
           </div>
         </div>
       </header>
