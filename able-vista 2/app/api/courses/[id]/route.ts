@@ -20,7 +20,14 @@ export async function GET(
 
     // First get the course with basic populate
     const course = await Course.findById(params.id)
-      .populate('instructor', 'name title avatar bio expertise')
+      .populate({
+        path: 'instructor',
+        select: 'title company bio expertise experience avatar rating totalStudents totalCourses totalReviews isVerified isActive socialLinks user',
+        populate: {
+          path: 'user',
+          select: 'name email'
+        }
+      })
       .lean()
 
     if (!course) {

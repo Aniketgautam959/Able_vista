@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   BookOpen,
   Play,
@@ -23,6 +24,9 @@ import {
   Bell,
   Settings,
   LogOut,
+  ExternalLink,
+  X,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { OnboardingModal } from "@/components/onboarding-modal";
@@ -102,6 +106,45 @@ interface UserProfile {
   };
 }
 
+interface CourseData {
+  _id: string;
+  title: string;
+  description: string;
+  category: string;
+  level: string;
+  price: number;
+  duration: string;
+  estimatedHours: number;
+  image: string;
+  skills: string[];
+  rating: number;
+  totalReviews: number;
+  totalStudents: number;
+  isPublished: boolean;
+}
+
+interface EnrollmentData {
+  _id: string;
+  status: 'active' | 'completed' | 'dropped' | 'paused';
+  progress: number;
+  completedLessons: Array<{
+    lesson: string;
+    completedAt: Date;
+    score?: number;
+    timeSpent?: number;
+  }>;
+  totalTimeSpent: number;
+  currentLesson?: string;
+  lastAccessedAt: Date;
+  enrolledAt: Date;
+  completedAt?: Date;
+}
+
+interface MyCourse {
+  course: CourseData;
+  enrollment: EnrollmentData;
+}
+
 interface OnboardingData {
   bio: string;
   location: string;
@@ -118,6 +161,9 @@ export default function DashboardPage() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [loading, setLoading] = useState(true);
   const [creatingProfile, setCreatingProfile] = useState(false);
+  const [myCourses, setMyCourses] = useState<MyCourse[]>([]);
+  const [coursesLoading, setCoursesLoading] = useState(true);
+  const [withdrawingCourse, setWithdrawingCourse] = useState<string | null>(null);
 
   // Fetch logged-in user and check for profile
   useEffect(() => {
@@ -149,6 +195,59 @@ export default function DashboardPage() {
 
     fetchUserAndProfile();
   }, []);
+
+  // Fetch My Courses
+  useEffect(() => {
+    const fetchMyCourses = async () => {
+      try {
+        setCoursesLoading(true);
+        const { data } = await axios.get("/api/my-courses", {
+          withCredentials: true
+        });
+        
+        if (data.error) {
+          console.error("Error fetching courses:", data.error);
+        } else {
+          setMyCourses(data.courses || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch my courses:", error);
+      } finally {
+        setCoursesLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchMyCourses();
+    }
+  }, [user]);
+
+  // Handle course withdrawal
+  const handleWithdrawCourse = async (enrollmentId: string) => {
+    try {
+      setWithdrawingCourse(enrollmentId);
+      
+      const response = await axios.put(`/api/enrollments/${enrollmentId}`, {
+        status: 'dropped'
+      });
+
+      if (response.data.success) {
+        // Update the local state to reflect the withdrawal
+        setMyCourses(prevCourses => 
+          prevCourses.map(course => 
+            course.enrollment._id === enrollmentId 
+              ? { ...course, enrollment: { ...course.enrollment, status: 'dropped' as const } }
+              : course
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Failed to withdraw from course:", error);
+      // Optionally show error message to user
+    } finally {
+      setWithdrawingCourse(null);
+    }
+  };
 
   // Handle onboarding form submission
   const handleOnboardingSubmit = async (profileData: OnboardingData) => {
@@ -300,7 +399,7 @@ export default function DashboardPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">Total Hours</p>
                   <p className="text-2xl font-bold text-primary">
-                    {userProfile?.stats.totalHours || dashboardData.user.totalHours}h
+                    {Math.round(myCourses.reduce((total, course) => total + course.enrollment.totalTimeSpent, 0) / 3600) || userProfile?.stats.totalHours || dashboardData.user.totalHours}h
                   </p>
                 </div>
                 <Clock className="w-8 h-8 text-blue-600" />
@@ -312,13 +411,12 @@ export default function DashboardPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Weekly Goal</p>
+                  <p className="text-sm text-muted-foreground">Enrolled Courses</p>
                   <p className="text-2xl font-bold text-primary">
-                    {dashboardData.weeklyGoal.completed}/
-                    {dashboardData.weeklyGoal.target}
+                    {myCourses.length}
                   </p>
                 </div>
-                <Target className="w-8 h-8 text-green-600" />
+                <BookOpen className="w-8 h-8 text-green-600" />
               </div>
             </CardContent>
           </Card>
@@ -327,9 +425,9 @@ export default function DashboardPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Certificates</p>
+                  <p className="text-sm text-muted-foreground">Completed</p>
                   <p className="text-2xl font-bold text-primary">
-                    {userProfile?.stats.completedCourses || 3}
+                    {myCourses.filter(course => course.enrollment.status === 'completed').length}
                   </p>
                 </div>
                 <Award className="w-8 h-8 text-purple-600" />
@@ -339,61 +437,114 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Continue Learning */}
+          {/* My Courses */}
           <div className="lg:col-span-2 space-y-6">
             <Card className="border-border">
               <CardHeader>
-                <CardTitle>Continue Learning</CardTitle>
-                <CardDescription>Pick up where you left off</CardDescription>
+                <CardTitle>My Courses</CardTitle>
+                <CardDescription>Your enrolled courses and progress</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {dashboardData.recentCourses.map((course) => (
-                  <div
-                    key={course.id}
-                    className="flex items-center space-x-4 p-4 bg-muted/30 rounded-lg">
+                {coursesLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                    <span>Loading your courses...</span>
+                  </div>
+                ) : myCourses.length === 0 ? (
+                  <div className="text-center py-8">
+                    <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No courses enrolled</h3>
+                    <p className="text-muted-foreground mb-4">
+                      You haven't enrolled in any courses yet. Start your learning journey!
+                    </p>
+                    <Button asChild>
+                      <Link href="/courses">Browse Courses</Link>
+                    </Button>
+                  </div>
+                ) : (
+                  myCourses.map(({ course, enrollment }) => (
                     <div
-                      className={`w-16 h-16 bg-gradient-to-br ${course.image} rounded-lg flex-shrink-0`}
-                    />
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-foreground mb-1">
-                        {course.title}
-                      </h3>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Next: {course.nextLesson}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 mr-4">
-                          <div className="flex justify-between text-sm mb-1">
-                            <span className="text-muted-foreground">
-                              Progress
-                            </span>
-                            <span className="text-foreground font-medium">
-                              {course.progress}%
-                            </span>
+                      key={course._id}
+                      className="flex items-center space-x-4 p-4 bg-muted/30 rounded-lg">
+                      <div
+                        className={`w-16 h-16 bg-gradient-to-br ${course.image} rounded-lg flex-shrink-0`}
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-foreground mb-1">
+                              {course.title}
+                            </h3>
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {course.description}
+                            </p>
                           </div>
-                          <Progress value={course.progress} className="h-2" />
+                          <Badge 
+                            variant={enrollment.status === 'completed' ? 'default' : 
+                                    enrollment.status === 'active' ? 'secondary' : 'outline'}
+                            className="ml-2 flex-shrink-0"
+                          >
+                            {enrollment.status}
+                          </Badge>
                         </div>
-                        <div className="text-right">
-                          <div className="text-sm text-muted-foreground mb-2">
-                            {course.timeLeft} left
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 mr-4">
+                            <div className="flex justify-between text-sm mb-1">
+                              <span className="text-muted-foreground">
+                                Progress
+                              </span>
+                              <span className="text-foreground font-medium">
+                                {enrollment.progress}%
+                              </span>
+                            </div>
+                            <Progress value={enrollment.progress} className="h-2" />
                           </div>
-                          <Button size="sm" asChild>
-                            <Link href={`/courses/${course.id}`}>
-                              <Play className="w-4 h-4 mr-2" />
-                              Continue
-                            </Link>
-                          </Button>
+                          <div className="flex flex-col gap-2">
+                            <Button 
+                              size="sm" 
+                              asChild
+                              className="bg-primary hover:bg-primary/90"
+                            >
+                              <Link href={`/courses/${course._id}`}>
+                                <ExternalLink className="w-4 h-4 mr-2" />
+                                Go to Course
+                              </Link>
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleWithdrawCourse(enrollment._id)}
+                              disabled={withdrawingCourse === enrollment._id}
+                              className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+                            >
+                              {withdrawingCourse === enrollment._id ? (
+                                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                              ) : (
+                                <X className="w-4 h-4 mr-2" />
+                              )}
+                              Withdraw
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+                          <span>{course.category} • {course.level}</span>
+                          <span>Last accessed: {new Date(enrollment.lastAccessedAt).toLocaleDateString()}</span>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-                <Button
-                  variant="outline"
-                  className="w-full bg-transparent"
-                  asChild>
-                  <Link href="/courses">View All Courses</Link>
-                </Button>
+                  ))
+                )}
+                
+                {myCourses.length > 0 && (
+                  <Button
+                    variant="outline"
+                    className="w-full bg-transparent"
+                    asChild>
+                    <Link href="/courses">Browse More Courses</Link>
+                  </Button>
+                )}
               </CardContent>
             </Card>
 

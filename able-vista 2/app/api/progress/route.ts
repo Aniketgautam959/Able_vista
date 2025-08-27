@@ -1,115 +1,174 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '../../../lib/db'
 import Progress from '../../../models/Progress'
+import { validateAuth } from '../../../lib/auth'
+
+interface ProgressData {
+  _id: string
+  user: string
+  course: string
+  lesson: string
+  bestScore: number
+  lastAccessedAt: string
+  isCompleted: boolean
+}
 
 interface ProgressResponse {
   success: boolean
   message: string
-  data?: any
+  data?: ProgressData | ProgressData[]
+  error?: string
 }
 
-// GET /api/progress - Get all progress records
+// GET /api/progress - Get progress for a specific lesson or all lessons in a course
 export async function GET(request: NextRequest): Promise<NextResponse<ProgressResponse>> {
   try {
     await dbConnect()
+    const authResult = await validateAuth(request)
+    if (!authResult.isValid) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Unauthorized',
+        error: authResult.error 
+      }, { status: 401 })
+    }
 
     const { searchParams } = new URL(request.url)
-    const user = searchParams.get('user')
-    const course = searchParams.get('course')
-    const lesson = searchParams.get('lesson')
-    const status = searchParams.get('status')
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '10')
-    const skip = (page - 1) * limit
+    const lessonId = searchParams.get('lesson')
+    const courseId = searchParams.get('course')
 
-    // Build filter object
-    const filter: any = {}
-    if (user) filter.user = user
-    if (course) filter.course = course
-    if (lesson) filter.lesson = lesson
-    if (status) filter.status = status
+    if (lessonId) {
+      // Get progress for a specific lesson
+      const progress = await Progress.findOne({
+        user: authResult.user!.userId,
+        lesson: lessonId
+      }).lean()
 
-    const progressRecords = await Progress.find(filter)
-      .populate('user', 'name email')
-      .populate('course', 'title')
-      .populate('lesson', 'title description type')
-      .skip(skip)
-      .limit(limit)
-      .sort({ lastAccessedAt: -1 })
-
-    const total = await Progress.countDocuments(filter)
-
-    return NextResponse.json({
-      success: true,
-      message: 'Progress records retrieved successfully',
-      data: {
-        progressRecords,
-        pagination: {
-          page,
-          limit,
-          total,
-          pages: Math.ceil(total / limit)
-        }
+      if (!progress) {
+        return NextResponse.json({
+          success: true,
+          message: 'No progress found for this lesson',
+          data: {
+            _id: '',
+            user: authResult.user!.userId,
+            course: courseId || '',
+            lesson: lessonId,
+            bestScore: 0,
+            lastAccessedAt: new Date().toISOString(),
+            isCompleted: false
+          }
+        })
       }
-    })
 
+      return NextResponse.json({
+        success: true,
+        message: 'Progress retrieved successfully',
+        data: {
+          ...progress,
+          isCompleted: progress.bestScore > 0 // Consider completed if bestScore > 0
+        }
+      })
+    } else if (courseId) {
+      // Get all progress for a course
+      const progressList = await Progress.find({
+        user: authResult.user!.userId,
+        course: courseId
+      }).lean()
+
+      const progressData = progressList.map(progress => ({
+        ...progress,
+        isCompleted: progress.bestScore > 0
+      }))
+
+      return NextResponse.json({
+        success: true,
+        message: 'Course progress retrieved successfully',
+        data: progressData
+      })
+    } else {
+      return NextResponse.json({
+        success: false,
+        message: 'Lesson ID or Course ID is required',
+        error: 'Missing lesson or course parameter'
+      }, { status: 400 })
+    }
   } catch (error) {
     console.error('Get progress error:', error)
     return NextResponse.json({
       success: false,
-      message: 'Failed to retrieve progress records'
+      message: 'Failed to retrieve progress',
+      error: 'Internal server error'
     }, { status: 500 })
   }
 }
 
-// POST /api/progress - Create a new progress record
+// POST /api/progress - Create or update progress
 export async function POST(request: NextRequest): Promise<NextResponse<ProgressResponse>> {
   try {
     await dbConnect()
+    const authResult = await validateAuth(request)
+    if (!authResult.isValid) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Unauthorized',
+        error: authResult.error 
+      }, { status: 401 })
+    }
 
     const body = await request.json()
-    const { user, course, lesson, status, completionPercentage, timeSpent, lastPosition, bestScore } = body
+    const { course, lesson, bestScore = 0, markCompleted = false } = body
 
-    // Validate required fields
-    if (!user || !course || !lesson) {
+    if (!course || !lesson) {
       return NextResponse.json({
         success: false,
-        message: 'Missing required fields'
+        message: 'Course and lesson are required',
+        error: 'Missing required fields'
       }, { status: 400 })
     }
 
-    // Check if progress record already exists
-    const existingProgress = await Progress.findOne({ user, course, lesson })
-    if (existingProgress) {
-      return NextResponse.json({
-        success: false,
-        message: 'Progress record already exists for this user, course, and lesson'
-      }, { status: 400 })
-    }
-
-    const progress = await Progress.create({
-      user,
+    // Find existing progress or create new one
+    let progress = await Progress.findOne({
+      user: authResult.user!.userId,
       course,
-      lesson,
-      status: status || 'not_started',
-      completionPercentage: completionPercentage || 0,
-      timeSpent: timeSpent || 0,
-      lastPosition: lastPosition || 0,
-      bestScore: bestScore || 0,
-      lastAccessedAt: new Date()
+      lesson
     })
+
+    if (!progress) {
+      // Create new progress
+      progress = new Progress({
+        user: authResult.user!.userId,
+        course,
+        lesson,
+        bestScore: markCompleted ? 1 : bestScore,
+        lastAccessedAt: new Date()
+      })
+    } else {
+      // Update existing progress
+      if (markCompleted) {
+        progress.bestScore = 1
+        progress.markCompleted()
+      } else if (bestScore > progress.bestScore) {
+        progress.bestScore = bestScore
+      }
+      progress.lastAccessedAt = new Date()
+    }
+
+    await progress.save()
 
     return NextResponse.json({
       success: true,
-      message: 'Progress record created successfully',
-      data: progress
-    }, { status: 201 })
-
+      message: markCompleted ? 'Lesson marked as completed' : 'Progress updated successfully',
+      data: {
+        ...progress.toObject(),
+        isCompleted: progress.bestScore > 0
+      }
+    })
   } catch (error) {
-    console.error('Create progress error:', error)
+    console.error('Create/update progress error:', error)
     return NextResponse.json({
       success: false,
-      message: 'Failed to create progress record'
+      message: 'Failed to update progress',
+      error: 'Internal server error'
     }, { status: 500 })
   }
 }

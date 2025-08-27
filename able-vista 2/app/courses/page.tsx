@@ -108,7 +108,8 @@ export default function CoursesPage() {
     const matchesSearch =
       course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       course.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      course.instructor.title.toLowerCase().includes(searchTerm.toLowerCase())
+      (course.instructor?.title?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+      (course.instructor?.user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) || false)
     const matchesCategory = selectedCategory === "All" || course.category === selectedCategory
     const matchesLevel = selectedLevel === "All" || course.level === selectedLevel
 
@@ -306,7 +307,9 @@ export default function CoursesPage() {
                 </div>
                 <CardTitle className="line-clamp-2">{course.title}</CardTitle>
                 <CardDescription className="line-clamp-2">{course.description}</CardDescription>
-                <div className="text-sm text-muted-foreground">by {course.instructor.title}</div>
+                <div className="text-sm text-muted-foreground">
+                  by {course.instructor?.title || course.instructor?.user?.name || 'Instructor'}
+                </div>
               </CardHeader>
 
               <CardContent>

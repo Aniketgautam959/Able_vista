@@ -52,6 +52,18 @@
           "method": "DELETE",
           "url": "/api/courses/:id",
           "description": "Delete course"
+        },
+        {
+          "method": "GET",
+          "url": "/api/courses/:id/enrollment-count",
+          "description": "Get enrollment count for a specific course",
+          "response": {
+            "courseId": "course_id",
+            "enrollmentCount": 150,
+            "activeEnrollments": 120,
+            "completedEnrollments": 30,
+            "error": null
+          }
         }
       ]
     },
@@ -201,6 +213,60 @@
           "method": "DELETE",
           "url": "/api/instructors/:id",
           "description": "Delete instructor"
+        }
+      ]
+    },
+    {
+      "name": "My Courses",
+      "routes": [
+        {
+          "method": "GET",
+          "url": "/api/my-courses",
+          "description": "Get all courses enrolled by the authenticated user",
+          "headers": {
+            "Cookie": "token=your_jwt_token"
+          },
+          "response": {
+            "courses": [
+              {
+                "course": {
+                  "_id": "course_id",
+                  "title": "React Fundamentals",
+                  "description": "Learn React basics",
+                  "category": "Web Development",
+                  "level": "Beginner",
+                  "price": 49.99,
+                  "duration": "8 weeks",
+                  "estimatedHours": 40,
+                  "image": "course_image_url",
+                  "skills": ["JavaScript", "React", "JSX"],
+                  "rating": 4.5,
+                  "totalReviews": 120,
+                  "totalStudents": 500,
+                  "isPublished": true
+                },
+                "enrollment": {
+                  "_id": "enrollment_id",
+                  "status": "active",
+                  "progress": 75,
+                  "completedLessons": [
+                    {
+                      "lesson": "lesson_id",
+                      "completedAt": "2024-01-15T10:30:00Z",
+                      "score": 85,
+                      "timeSpent": 1800
+                    }
+                  ],
+                  "totalTimeSpent": 7200,
+                  "currentLesson": "current_lesson_id",
+                  "lastAccessedAt": "2024-01-15T10:30:00Z",
+                  "enrolledAt": "2024-01-01T09:00:00Z",
+                  "completedAt": null
+                }
+              }
+            ],
+            "error": null
+          }
         }
       ]
     },

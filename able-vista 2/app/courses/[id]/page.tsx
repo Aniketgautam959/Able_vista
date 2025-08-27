@@ -31,6 +31,8 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { ChatBot } from "@/components/chat-bot"
+import { useEnrollmentCount, useEnrollmentStatsUtils } from "@/hooks/use-enrollment-count"
+import { useProgress } from "@/hooks/use-progress"
 
 // API response types
 interface AuthUser {
@@ -52,9 +54,26 @@ interface ShowMeResponse {
 interface Instructor {
   _id: string
   title: string
+  company?: string
   bio?: string
   expertise: string[]
+  experience?: string
   avatar: string
+  rating: number
+  totalStudents: number
+  totalCourses: number
+  totalReviews: number
+  isVerified: boolean
+  isActive: boolean
+  socialLinks?: {
+    linkedin?: string
+    github?: string
+  }
+  user: {
+    _id: string
+    name: string
+    email: string
+  }
 }
 
 interface Lesson {
@@ -96,7 +115,7 @@ interface Course {
   title: string
   description: string
   category: string
-  instructor: Instructor
+  instructor?: Instructor
   level: string
   price: number
   duration: string
@@ -120,6 +139,14 @@ interface ApiResponse {
   data: Course
 }
 
+interface EnrollmentCountData {
+  courseId: string
+  enrollmentCount: number
+  activeEnrollments: number
+  completedEnrollments: number
+  error: string | null
+}
+
 export default function CoursePage() {
   const params = useParams()
   const courseId = params.id as string
@@ -132,6 +159,13 @@ export default function CoursePage() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
   const [enrollmentSuccess, setEnrollmentSuccess] = useState(false)
   const [enrollmentError, setEnrollmentError] = useState<string | null>(null)
+
+  // Get enrollment count data
+  const { enrollmentStats, loading: enrollmentCountLoading } = useEnrollmentCount(courseId)
+  const enrollmentUtils = useEnrollmentStatsUtils(enrollmentStats)
+
+  // Get progress data
+  const { progressData, loading: progressLoading, markLessonCompleted, getLessonProgress } = useProgress(courseId)
 
   // Fetch course data and check enrollment status
   useEffect(() => {
@@ -250,7 +284,7 @@ export default function CoursePage() {
   }
 
   const totalLessons = courseData.chapters.reduce((acc, chapter) => acc + chapter.lessons.length, 0)
-  const completedLessons = 0 // TODO: Implement progress tracking
+  const completedLessons = progressData.filter(p => p.isCompleted).length
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -262,6 +296,16 @@ export default function CoursePage() {
         return <Award className="w-4 h-4" />
       default:
         return <BookOpen className="w-4 h-4" />
+    }
+  }
+
+  const handleMarkCompleted = async (lessonId: string) => {
+    if (!currentUser) return
+    
+    const success = await markLessonCompleted(lessonId)
+    if (success) {
+      // Show success feedback (could add toast notification here)
+      console.log('Lesson marked as completed')
     }
   }
 
@@ -298,50 +342,83 @@ export default function CoursePage() {
               <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">{courseData.title}</h1>
               <p className="text-lg text-muted-foreground mb-6">{courseData.description}</p>
 
-              <div className="flex items-center gap-6 text-sm text-muted-foreground mb-6">
-                <div className="flex items-center">
-                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400 mr-1" />
-                  <span className="font-medium text-foreground">
-                    {courseData.rating > 0 ? courseData.rating.toFixed(1) : 'New'}
-                  </span>
-                  <span className="ml-1">({courseData.totalReviews} reviews)</span>
-                </div>
-                <div className="flex items-center">
-                  <Users className="w-4 h-4 mr-1" />
-                  <span>{courseData.totalStudents.toLocaleString()} students</span>
-                </div>
-                <div className="flex items-center">
-                  <Clock className="w-4 h-4 mr-1" />
-                  <span>{courseData.duration}</span>
-                </div>
-              </div>
+                             <div className="flex items-center gap-6 text-sm text-muted-foreground mb-6">
+                 <div className="flex items-center">
+                   <Star className="w-4 h-4 fill-yellow-400 text-yellow-400 mr-1" />
+                   <span className="font-medium text-foreground">
+                     {courseData.rating > 0 ? courseData.rating.toFixed(1) : 'New'}
+                   </span>
+                   <span className="ml-1">({courseData.totalReviews} reviews)</span>
+                 </div>
+                 <div className="flex items-center">
+                   <Users className="w-4 h-4 mr-1" />
+                   <span>
+                     {enrollmentCountLoading ? (
+                       <Loader2 className="w-4 h-4 animate-spin" />
+                     ) : enrollmentStats ? (
+                       `${enrollmentUtils.formatEnrollmentCount(enrollmentStats.enrollmentCount)} enrolled`
+                     ) : (
+                       `${courseData.totalStudents.toLocaleString()} students`
+                     )}
+                   </span>
+                 </div>
+                 <div className="flex items-center">
+                   <Clock className="w-4 h-4 mr-1" />
+                   <span>{courseData.duration}</span>
+                 </div>
+               </div>
 
-              {/* Instructor */}
-              <div className="flex items-center space-x-4 p-4 bg-muted/30 rounded-lg">
-                <Avatar className="w-12 h-12">
-                  <AvatarImage src={courseData.instructor.avatar || "/placeholder.svg"} />
-                  <AvatarFallback>
-                    {courseData.instructor.title
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="font-semibold text-foreground">{courseData.instructor.title}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {courseData.instructor.bio || 'Experienced instructor'}
-                  </p>
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
-                    <span>{courseData.totalStudents.toLocaleString()} students</span>
-                    <span>1 course</span>
-                    <div className="flex items-center">
-                      <Star className="w-3 h-3 fill-yellow-400 text-yellow-400 mr-1" />
-                      <span>{courseData.instructor.expertise?.length || 0} skills</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                             {/* Instructor */}
+               {courseData.instructor && (
+                 <div className="flex items-center space-x-4 p-4 bg-muted/30 rounded-lg">
+                   <Avatar className="w-12 h-12">
+                     <AvatarImage src={courseData.instructor.avatar || "/placeholder.svg"} />
+                     <AvatarFallback>
+                       {courseData.instructor.user?.name
+                         ? courseData.instructor.user.name
+                             .split(" ")
+                             .map((n) => n[0])
+                             .join("")
+                         : courseData.instructor.title
+                         ? courseData.instructor.title
+                             .split(" ")
+                             .map((n) => n[0])
+                             .join("")
+                         : "IN"}
+                     </AvatarFallback>
+                   </Avatar>
+                   <div>
+                     <h3 className="font-semibold text-foreground">
+                       {courseData.instructor.user?.name || courseData.instructor.title || "Instructor"}
+                     </h3>
+                     <p className="text-sm text-muted-foreground">
+                       {courseData.instructor.title} {courseData.instructor.company && `at ${courseData.instructor.company}`}
+                     </p>
+                     <p className="text-xs text-muted-foreground mt-1">
+                       {courseData.instructor.bio || 'Experienced instructor'}
+                     </p>
+                     <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
+                       <span>
+                         {enrollmentCountLoading ? (
+                           <Loader2 className="w-3 h-3 animate-spin" />
+                         ) : enrollmentStats ? (
+                           `${enrollmentUtils.formatEnrollmentCount(enrollmentStats.enrollmentCount)} students`
+                         ) : (
+                           `${courseData.totalStudents.toLocaleString()} students`
+                         )}
+                       </span>
+                       <span>{courseData.instructor.totalCourses || 1} course{courseData.instructor.totalCourses !== 1 ? 's' : ''}</span>
+                       <div className="flex items-center">
+                         <Star className="w-3 h-3 fill-yellow-400 text-yellow-400 mr-1" />
+                         <span>{courseData.instructor.expertise?.length || 0} skills</span>
+                       </div>
+                       {courseData.instructor.experience && (
+                         <span>{courseData.instructor.experience} experience</span>
+                       )}
+                     </div>
+                   </div>
+                 </div>
+               )}
             </div>
           </div>
 
@@ -411,24 +488,59 @@ export default function CoursePage() {
                     )}
                   </div>
 
-                <Separator className="my-6" />
+                                 <Separator className="my-6" />
 
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Button variant="ghost" size="sm">
-                      <Heart className="w-4 h-4 mr-2" />
-                      Save
-                    </Button>
-                    <Button variant="ghost" size="sm">
-                      <Share className="w-4 h-4 mr-2" />
-                      Share
-                    </Button>
-                    <Button variant="ghost" size="sm">
-                      <Download className="w-4 h-4 mr-2" />
-                      Download
-                    </Button>
-                  </div>
-                </div>
+                 {/* Enrollment Statistics */}
+                 {enrollmentStats && (
+                   <div className="space-y-3">
+                     <h4 className="text-sm font-medium text-foreground">Course Statistics</h4>
+                     <div className="grid grid-cols-2 gap-3 text-xs">
+                       <div className="text-center p-2 bg-muted/30 rounded">
+                         <div className="font-semibold text-primary">
+                           {enrollmentUtils.formatEnrollmentCount(enrollmentStats.enrollmentCount)}
+                         </div>
+                         <div className="text-muted-foreground">Total Enrolled</div>
+                       </div>
+                       <div className="text-center p-2 bg-muted/30 rounded">
+                         <div className="font-semibold text-green-600">
+                           {enrollmentUtils.formatEnrollmentCount(enrollmentStats.activeEnrollments)}
+                         </div>
+                         <div className="text-muted-foreground">Active Students</div>
+                       </div>
+                       <div className="text-center p-2 bg-muted/30 rounded">
+                         <div className="font-semibold text-blue-600">
+                           {enrollmentUtils.formatEnrollmentCount(enrollmentStats.completedEnrollments)}
+                         </div>
+                         <div className="text-muted-foreground">Completed</div>
+                       </div>
+                       <div className="text-center p-2 bg-muted/30 rounded">
+                         <div className="font-semibold text-orange-600">
+                           {enrollmentUtils.getCompletionRate()}%
+                         </div>
+                         <div className="text-muted-foreground">Completion Rate</div>
+                       </div>
+                     </div>
+                   </div>
+                 )}
+
+                 <Separator className="my-6" />
+
+                 <div className="space-y-4">
+                   <div className="flex items-center justify-between">
+                     <Button variant="ghost" size="sm">
+                       <Heart className="w-4 h-4 mr-2" />
+                       Save
+                     </Button>
+                     <Button variant="ghost" size="sm">
+                       <Share className="w-4 h-4 mr-2" />
+                       Share
+                     </Button>
+                     <Button variant="ghost" size="sm">
+                       <Download className="w-4 h-4 mr-2" />
+                       Download
+                     </Button>
+                   </div>
+                 </div>
               </CardContent>
             </Card>
           </div>
@@ -468,37 +580,62 @@ export default function CoursePage() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2">
-                        {chapter.lessons && chapter.lessons.length > 0 ? (
-                          chapter.lessons.map((lesson, lessonIndex) => (
-                            <div
-                              key={lesson._id}
-                              className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer"
-                          >
-                            <div className="flex items-center space-x-3">
-                                  <div className="w-5 h-5 rounded-full border-2 border-muted-foreground" />
-                              <div className="flex items-center space-x-2">
-                                {getTypeIcon(lesson.type)}
-                                  <Link
-                                    href={`/courses/${courseData._id}/lectures/${lesson._id}`}
-                                    className="font-medium text-foreground hover:text-primary transition-colors"
-                                  >
-                                    {lesson.order || lessonIndex + 1}. {lesson.title}
-                                  </Link>
-                              </div>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Badge variant="outline" className="text-xs">
-                                {lesson.duration}
-                              </Badge>
-                                <Link href={`/courses/${courseData._id}/lectures/${lesson._id}`}>
-                                  <Button size="sm" variant="ghost">
-                                    <Play className="w-4 h-4" />
-                                  </Button>
-                                </Link>
-                            </div>
-                          </div>
-                          ))
-                        ) : (
+                                                 {chapter.lessons && chapter.lessons.length > 0 ? (
+                           chapter.lessons.map((lesson, lessonIndex) => {
+                             const lessonProgress = getLessonProgress(lesson._id)
+                             const isCompleted = lessonProgress?.isCompleted || false
+                             
+                             return (
+                               <div
+                                 key={lesson._id}
+                                 className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50"
+                               >
+                                 <div className="flex items-center space-x-3">
+                                   <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center">
+                                     {isCompleted ? (
+                                       <CheckCircle className="w-4 h-4 text-green-600 fill-green-600" />
+                                     ) : (
+                                       <div className="w-2 h-2 rounded-full bg-muted-foreground" />
+                                     )}
+                                   </div>
+                                   <div className="flex items-center space-x-2">
+                                     {getTypeIcon(lesson.type)}
+                                     <Link
+                                       href={`/courses/${courseData._id}/lectures/${lesson._id}`}
+                                       className="font-medium text-foreground hover:text-primary transition-colors"
+                                     >
+                                       {lesson.order || lessonIndex + 1}. {lesson.title}
+                                     </Link>
+                                   </div>
+                                 </div>
+                                 <div className="flex items-center space-x-2">
+                                   <Badge variant="outline" className="text-xs">
+                                     {lesson.duration}
+                                   </Badge>
+                                   {!isCompleted && currentUser && (
+                                     <Button 
+                                       size="sm" 
+                                       variant="outline"
+                                       onClick={() => handleMarkCompleted(lesson._id)}
+                                       disabled={progressLoading}
+                                     >
+                                       {progressLoading ? (
+                                         <Loader2 className="w-3 h-3 animate-spin" />
+                                       ) : (
+                                         'Mark Complete'
+                                       )}
+                                     </Button>
+                                   )}
+                                   <Link href={`/courses/${courseData._id}/lectures/${lesson._id}`}>
+                                     <Button size="sm" variant="ghost">
+                                       <Play className="w-4 h-4" />
+                                     </Button>
+                                   </Link>
+                                 </div>
+                               </div>
+                             )
+                           })
+                         ) : (
                           <div className="text-center py-4 text-muted-foreground">
                             No lessons available yet
                           </div>
@@ -510,32 +647,60 @@ export default function CoursePage() {
               </div>
 
               <div className="lg:col-span-1">
-                <Card className="border-border sticky top-24">
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Award className="w-5 h-5 mr-2" />
-                      Course Features
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center space-x-3">
-                      <MessageCircle className="w-5 h-5 text-primary" />
-                      <span className="text-sm">AI Chatbot Assistant</span>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Volume2 className="w-5 h-5 text-primary" />
-                      <span className="text-sm">Text-to-Speech</span>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Download className="w-5 h-5 text-primary" />
-                      <span className="text-sm">Downloadable Resources</span>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Award className="w-5 h-5 text-primary" />
-                      <span className="text-sm">Certificate of Completion</span>
-                    </div>
-                  </CardContent>
-                </Card>
+                                 <Card className="border-border sticky top-24">
+                   <CardHeader>
+                     <CardTitle className="flex items-center">
+                       <Award className="w-5 h-5 mr-2" />
+                       Course Progress
+                     </CardTitle>
+                   </CardHeader>
+                   <CardContent className="space-y-4">
+                     {progressLoading ? (
+                       <div className="flex items-center space-x-3">
+                         <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                         <span className="text-sm">Loading progress...</span>
+                       </div>
+                     ) : (
+                       <>
+                         <div className="flex items-center justify-between">
+                           <span className="text-sm text-muted-foreground">Progress</span>
+                           <span className="text-sm font-medium">
+                             {completedLessons} / {totalLessons} lessons
+                           </span>
+                         </div>
+                         <Progress 
+                           value={totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0} 
+                           className="w-full" 
+                         />
+                         <div className="text-xs text-muted-foreground text-center">
+                           {Math.round((completedLessons / totalLessons) * 100)}% Complete
+                         </div>
+                       </>
+                     )}
+                     
+                     <Separator />
+                     
+                     <div className="space-y-3">
+                       <h4 className="text-sm font-medium">Course Features</h4>
+                       <div className="flex items-center space-x-3">
+                         <MessageCircle className="w-5 h-5 text-primary" />
+                         <span className="text-sm">AI Chatbot Assistant</span>
+                       </div>
+                       <div className="flex items-center space-x-3">
+                         <Volume2 className="w-5 h-5 text-primary" />
+                         <span className="text-sm">Text-to-Speech</span>
+                       </div>
+                       <div className="flex items-center space-x-3">
+                         <Download className="w-5 h-5 text-primary" />
+                         <span className="text-sm">Downloadable Resources</span>
+                       </div>
+                       <div className="flex items-center space-x-3">
+                         <Award className="w-5 h-5 text-primary" />
+                         <span className="text-sm">Certificate of Completion</span>
+                       </div>
+                     </div>
+                   </CardContent>
+                 </Card>
               </div>
             </div>
           </TabsContent>
@@ -593,57 +758,133 @@ export default function CoursePage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="instructor">
-            <Card className="border-border">
-              <CardContent className="p-6">
-                <div className="flex items-start space-x-6">
-                  <Avatar className="w-24 h-24">
-                    <AvatarImage src={courseData.instructor.avatar || "/placeholder.svg"} />
-                    <AvatarFallback className="text-2xl">
-                      {courseData.instructor.title
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <h2 className="text-2xl font-bold text-foreground mb-2">{courseData.instructor.title}</h2>
-                    <p className="text-lg text-muted-foreground mb-4">
-                      {courseData.instructor.bio || 'Experienced instructor'}
-                    </p>
-                    <div className="grid grid-cols-3 gap-4 mb-6">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-primary">{courseData.rating > 0 ? courseData.rating.toFixed(1) : 'New'}</div>
-                        <div className="text-sm text-muted-foreground">Instructor Rating</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-primary">
-                          {courseData.totalStudents.toLocaleString()}
-                        </div>
-                        <div className="text-sm text-muted-foreground">Students</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-primary">1</div>
-                        <div className="text-sm text-muted-foreground">Courses</div>
-                      </div>
-                    </div>
-                    {courseData.instructor.expertise && courseData.instructor.expertise.length > 0 && (
-                      <div className="mb-4">
-                        <h3 className="font-semibold text-foreground mb-2">Expertise</h3>
-                        <div className="flex flex-wrap gap-2">
-                          {courseData.instructor.expertise.map((skill, index) => (
-                            <Badge key={index} variant="outline">
-                              {skill}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                     <TabsContent value="instructor">
+             <Card className="border-border">
+               <CardContent className="p-6">
+                 <div className="flex items-start space-x-6">
+                   <Avatar className="w-24 h-24">
+                     <AvatarImage src={courseData.instructor.avatar || "/placeholder.svg"} />
+                     <AvatarFallback className="text-2xl">
+                       {courseData.instructor.user?.name
+                         ? courseData.instructor.user.name
+                             .split(" ")
+                             .map((n) => n[0])
+                             .join("")
+                         : courseData.instructor.title
+                         ? courseData.instructor.title
+                             .split(" ")
+                             .map((n) => n[0])
+                             .join("")
+                         : "IN"}
+                     </AvatarFallback>
+                   </Avatar>
+                   <div className="flex-1">
+                     <h2 className="text-2xl font-bold text-foreground mb-2">
+                       {courseData.instructor.user?.name || courseData.instructor.title}
+                     </h2>
+                     <p className="text-lg text-muted-foreground mb-2">
+                       {courseData.instructor.title} {courseData.instructor.company && `at ${courseData.instructor.company}`}
+                     </p>
+                     <p className="text-sm text-muted-foreground mb-4">
+                       {courseData.instructor.bio || 'Experienced instructor'}
+                     </p>
+                     
+                     {/* Instructor Stats */}
+                     <div className="grid grid-cols-4 gap-4 mb-6">
+                       <div className="text-center">
+                         <div className="text-2xl font-bold text-primary">
+                           {courseData.instructor.rating > 0 ? courseData.instructor.rating.toFixed(1) : 'New'}
+                         </div>
+                         <div className="text-sm text-muted-foreground">Instructor Rating</div>
+                       </div>
+                       <div className="text-center">
+                         <div className="text-2xl font-bold text-primary">
+                           {enrollmentCountLoading ? (
+                             <Loader2 className="w-6 h-6 animate-spin mx-auto" />
+                           ) : enrollmentStats ? (
+                             enrollmentUtils.formatEnrollmentCount(enrollmentStats.enrollmentCount)
+                           ) : (
+                             courseData.instructor.totalStudents.toLocaleString()
+                           )}
+                         </div>
+                         <div className="text-sm text-muted-foreground">Students</div>
+                       </div>
+                       <div className="text-center">
+                         <div className="text-2xl font-bold text-primary">
+                           {courseData.instructor.totalCourses || 1}
+                         </div>
+                         <div className="text-sm text-muted-foreground">Courses</div>
+                       </div>
+                       <div className="text-center">
+                         <div className="text-2xl font-bold text-primary">
+                           {courseData.instructor.totalReviews || 0}
+                         </div>
+                         <div className="text-sm text-muted-foreground">Reviews</div>
+                       </div>
+                     </div>
+
+                     {/* Experience and Company */}
+                     {(courseData.instructor.experience || courseData.instructor.company) && (
+                       <div className="mb-4">
+                         <h3 className="font-semibold text-foreground mb-2">Experience</h3>
+                         <div className="flex flex-wrap gap-4 text-sm">
+                           {courseData.instructor.experience && (
+                             <div className="flex items-center">
+                               <Clock className="w-4 h-4 mr-2 text-muted-foreground" />
+                               <span>{courseData.instructor.experience} of experience</span>
+                             </div>
+                           )}
+                           {courseData.instructor.company && (
+                             <div className="flex items-center">
+                               <Award className="w-4 h-4 mr-2 text-muted-foreground" />
+                               <span>Works at {courseData.instructor.company}</span>
+                             </div>
+                           )}
+                         </div>
+                       </div>
+                     )}
+
+                     {/* Expertise */}
+                     {courseData.instructor.expertise && courseData.instructor.expertise.length > 0 && (
+                       <div className="mb-4">
+                         <h3 className="font-semibold text-foreground mb-2">Expertise</h3>
+                         <div className="flex flex-wrap gap-2">
+                           {courseData.instructor.expertise.map((skill, index) => (
+                             <Badge key={index} variant="outline">
+                               {skill}
+                             </Badge>
+                           ))}
+                         </div>
+                       </div>
+                     )}
+
+                     {/* Social Links */}
+                     {courseData.instructor.socialLinks && (
+                       <div className="mb-4">
+                         <h3 className="font-semibold text-foreground mb-2">Connect</h3>
+                         <div className="flex gap-3">
+                           {courseData.instructor.socialLinks.linkedin && (
+                             <Button variant="outline" size="sm" asChild>
+                               <a href={courseData.instructor.socialLinks.linkedin} target="_blank" rel="noopener noreferrer">
+                                 LinkedIn
+                               </a>
+                             </Button>
+                           )}
+                           {courseData.instructor.socialLinks.github && (
+                             <Button variant="outline" size="sm" asChild>
+                               <a href={courseData.instructor.socialLinks.github} target="_blank" rel="noopener noreferrer">
+                                 GitHub
+                               </a>
+                             </Button>
+                           )}
+                         </div>
+                       </div>
+                     )}
+                   </div>
+                 </div>
+               </CardContent>
+             </Card>
+           </TabsContent>
 
           <TabsContent value="reviews">
             <div className="space-y-6">
