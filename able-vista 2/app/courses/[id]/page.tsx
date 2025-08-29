@@ -28,6 +28,7 @@ import {
   Heart,
   Loader2,
   X,
+  User,
 } from "lucide-react"
 import Link from "next/link"
 import { ChatBot } from "@/components/chat-bot"
@@ -451,7 +452,6 @@ export default function CoursePage() {
               </div>
               <CardContent className="p-6">
                 <div className="text-center mb-6">
-                  <div className="text-3xl font-bold text-primary mb-2">${courseData.price}</div>
                   <Badge variant="outline" className="mb-4">
                     {courseData.isPublished ? 'Published' : 'Draft'}
                     </Badge>
@@ -480,7 +480,7 @@ export default function CoursePage() {
                         )}
                       </Button>
                     )}
-                    <div className="text-center text-sm text-muted-foreground">30-day money-back guarantee</div>
+
                     {!currentUser && (
                       <div className="text-center text-sm text-muted-foreground">
                         Please sign in to enroll in this course
@@ -761,127 +761,137 @@ export default function CoursePage() {
                      <TabsContent value="instructor">
              <Card className="border-border">
                <CardContent className="p-6">
-                 <div className="flex items-start space-x-6">
-                   <Avatar className="w-24 h-24">
-                     <AvatarImage src={courseData.instructor.avatar || "/placeholder.svg"} />
-                     <AvatarFallback className="text-2xl">
-                       {courseData.instructor.user?.name
-                         ? courseData.instructor.user.name
-                             .split(" ")
-                             .map((n) => n[0])
-                             .join("")
-                         : courseData.instructor.title
-                         ? courseData.instructor.title
-                             .split(" ")
-                             .map((n) => n[0])
-                             .join("")
-                         : "IN"}
-                     </AvatarFallback>
-                   </Avatar>
-                   <div className="flex-1">
-                     <h2 className="text-2xl font-bold text-foreground mb-2">
-                       {courseData.instructor.user?.name || courseData.instructor.title}
-                     </h2>
-                     <p className="text-lg text-muted-foreground mb-2">
-                       {courseData.instructor.title} {courseData.instructor.company && `at ${courseData.instructor.company}`}
-                     </p>
-                     <p className="text-sm text-muted-foreground mb-4">
-                       {courseData.instructor.bio || 'Experienced instructor'}
-                     </p>
-                     
-                     {/* Instructor Stats */}
-                     <div className="grid grid-cols-4 gap-4 mb-6">
-                       <div className="text-center">
-                         <div className="text-2xl font-bold text-primary">
-                           {courseData.instructor.rating > 0 ? courseData.instructor.rating.toFixed(1) : 'New'}
+                 {courseData.instructor ? (
+                   <div className="flex items-start space-x-6">
+                     <Avatar className="w-24 h-24">
+                       <AvatarImage src={courseData.instructor.avatar || "/placeholder.svg"} />
+                       <AvatarFallback className="text-2xl">
+                         {courseData.instructor.user?.name
+                           ? courseData.instructor.user.name
+                               .split(" ")
+                               .map((n) => n[0])
+                               .join("")
+                           : courseData.instructor.title
+                           ? courseData.instructor.title
+                               .split(" ")
+                               .map((n) => n[0])
+                               .join("")
+                           : "IN"}
+                       </AvatarFallback>
+                     </Avatar>
+                     <div className="flex-1">
+                       <h2 className="text-2xl font-bold text-foreground mb-2">
+                         {courseData.instructor.user?.name || courseData.instructor.title}
+                       </h2>
+                       <p className="text-lg text-muted-foreground mb-2">
+                         {courseData.instructor.title} {courseData.instructor.company && `at ${courseData.instructor.company}`}
+                       </p>
+                       <p className="text-sm text-muted-foreground mb-4">
+                         {courseData.instructor.bio || 'Experienced instructor'}
+                       </p>
+                       
+                       {/* Instructor Stats */}
+                       <div className="grid grid-cols-4 gap-4 mb-6">
+                         <div className="text-center">
+                           <div className="text-2xl font-bold text-primary">
+                             {courseData.instructor.rating > 0 ? courseData.instructor.rating.toFixed(1) : 'New'}
+                           </div>
+                           <div className="text-sm text-muted-foreground">Instructor Rating</div>
                          </div>
-                         <div className="text-sm text-muted-foreground">Instructor Rating</div>
-                       </div>
-                       <div className="text-center">
-                         <div className="text-2xl font-bold text-primary">
-                           {enrollmentCountLoading ? (
-                             <Loader2 className="w-6 h-6 animate-spin mx-auto" />
-                           ) : enrollmentStats ? (
-                             enrollmentUtils.formatEnrollmentCount(enrollmentStats.enrollmentCount)
-                           ) : (
-                             courseData.instructor.totalStudents.toLocaleString()
-                           )}
+                         <div className="text-center">
+                           <div className="text-2xl font-bold text-primary">
+                             {enrollmentCountLoading ? (
+                               <Loader2 className="w-6 h-6 animate-spin mx-auto" />
+                             ) : enrollmentStats ? (
+                               enrollmentUtils.formatEnrollmentCount(enrollmentStats.enrollmentCount)
+                             ) : (
+                               courseData.instructor.totalStudents.toLocaleString()
+                             )}
+                           </div>
+                           <div className="text-sm text-muted-foreground">Students</div>
                          </div>
-                         <div className="text-sm text-muted-foreground">Students</div>
-                       </div>
-                       <div className="text-center">
-                         <div className="text-2xl font-bold text-primary">
-                           {courseData.instructor.totalCourses || 1}
+                         <div className="text-center">
+                           <div className="text-2xl font-bold text-primary">
+                             {courseData.instructor.totalCourses || 1}
+                           </div>
+                           <div className="text-sm text-muted-foreground">Courses</div>
                          </div>
-                         <div className="text-sm text-muted-foreground">Courses</div>
-                       </div>
-                       <div className="text-center">
-                         <div className="text-2xl font-bold text-primary">
-                           {courseData.instructor.totalReviews || 0}
+                         <div className="text-center">
+                           <div className="text-2xl font-bold text-primary">
+                             {courseData.instructor.totalReviews || 0}
+                           </div>
+                           <div className="text-sm text-muted-foreground">Reviews</div>
                          </div>
-                         <div className="text-sm text-muted-foreground">Reviews</div>
                        </div>
+
+                       {/* Experience and Company */}
+                       {(courseData.instructor.experience || courseData.instructor.company) && (
+                         <div className="mb-4">
+                           <h3 className="font-semibold text-foreground mb-2">Experience</h3>
+                           <div className="flex flex-wrap gap-4 text-sm">
+                             {courseData.instructor.experience && (
+                               <div className="flex items-center">
+                                 <Clock className="w-4 h-4 mr-2 text-muted-foreground" />
+                                 <span>{courseData.instructor.experience} of experience</span>
+                               </div>
+                             )}
+                             {courseData.instructor.company && (
+                               <div className="flex items-center">
+                                 <Award className="w-4 h-4 mr-2 text-muted-foreground" />
+                                 <span>Works at {courseData.instructor.company}</span>
+                               </div>
+                             )}
+                           </div>
+                         </div>
+                       )}
+
+                       {/* Expertise */}
+                       {courseData.instructor.expertise && courseData.instructor.expertise.length > 0 && (
+                         <div className="mb-4">
+                           <h3 className="font-semibold text-foreground mb-2">Expertise</h3>
+                           <div className="flex flex-wrap gap-2">
+                             {courseData.instructor.expertise.map((skill, index) => (
+                               <Badge key={index} variant="outline">
+                                 {skill}
+                               </Badge>
+                             ))}
+                           </div>
+                         </div>
+                       )}
+
+                       {/* Social Links */}
+                       {courseData.instructor.socialLinks && (
+                         <div className="mb-4">
+                           <h3 className="font-semibold text-foreground mb-2">Connect</h3>
+                           <div className="flex gap-3">
+                             {courseData.instructor.socialLinks.linkedin && (
+                               <Button variant="outline" size="sm" asChild>
+                                 <a href={courseData.instructor.socialLinks.linkedin} target="_blank" rel="noopener noreferrer">
+                                   LinkedIn
+                                 </a>
+                               </Button>
+                             )}
+                             {courseData.instructor.socialLinks.github && (
+                               <Button variant="outline" size="sm" asChild>
+                                 <a href={courseData.instructor.socialLinks.github} target="_blank" rel="noopener noreferrer">
+                                   GitHub
+                                 </a>
+                               </Button>
+                             )}
+                           </div>
+                         </div>
+                       )}
                      </div>
-
-                     {/* Experience and Company */}
-                     {(courseData.instructor.experience || courseData.instructor.company) && (
-                       <div className="mb-4">
-                         <h3 className="font-semibold text-foreground mb-2">Experience</h3>
-                         <div className="flex flex-wrap gap-4 text-sm">
-                           {courseData.instructor.experience && (
-                             <div className="flex items-center">
-                               <Clock className="w-4 h-4 mr-2 text-muted-foreground" />
-                               <span>{courseData.instructor.experience} of experience</span>
-                             </div>
-                           )}
-                           {courseData.instructor.company && (
-                             <div className="flex items-center">
-                               <Award className="w-4 h-4 mr-2 text-muted-foreground" />
-                               <span>Works at {courseData.instructor.company}</span>
-                             </div>
-                           )}
-                         </div>
-                       </div>
-                     )}
-
-                     {/* Expertise */}
-                     {courseData.instructor.expertise && courseData.instructor.expertise.length > 0 && (
-                       <div className="mb-4">
-                         <h3 className="font-semibold text-foreground mb-2">Expertise</h3>
-                         <div className="flex flex-wrap gap-2">
-                           {courseData.instructor.expertise.map((skill, index) => (
-                             <Badge key={index} variant="outline">
-                               {skill}
-                             </Badge>
-                           ))}
-                         </div>
-                       </div>
-                     )}
-
-                     {/* Social Links */}
-                     {courseData.instructor.socialLinks && (
-                       <div className="mb-4">
-                         <h3 className="font-semibold text-foreground mb-2">Connect</h3>
-                         <div className="flex gap-3">
-                           {courseData.instructor.socialLinks.linkedin && (
-                             <Button variant="outline" size="sm" asChild>
-                               <a href={courseData.instructor.socialLinks.linkedin} target="_blank" rel="noopener noreferrer">
-                                 LinkedIn
-                               </a>
-                             </Button>
-                           )}
-                           {courseData.instructor.socialLinks.github && (
-                             <Button variant="outline" size="sm" asChild>
-                               <a href={courseData.instructor.socialLinks.github} target="_blank" rel="noopener noreferrer">
-                                 GitHub
-                               </a>
-                             </Button>
-                           )}
-                         </div>
-                       </div>
-                     )}
                    </div>
-                 </div>
+                 ) : (
+                   <div className="text-center py-8">
+                     <div className="text-muted-foreground mb-4">
+                       <User className="w-16 h-16 mx-auto mb-4" />
+                       <p className="text-lg">Instructor information not available</p>
+                       <p className="text-sm">This course may not have an assigned instructor yet.</p>
+                     </div>
+                   </div>
+                 )}
                </CardContent>
              </Card>
            </TabsContent>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '../../../../lib/db'
-import Enrollment from '../../../../models/Enrollment'
+import { Enrollment } from '../../../../models'
 
 interface EnrollmentResponse {
   success: boolean

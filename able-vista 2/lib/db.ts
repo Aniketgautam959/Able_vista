@@ -1,4 +1,6 @@
 import mongoose from "mongoose";
+// Import all models to ensure they are registered with Mongoose
+import "../models/index";
 
 const MONGODB_URI =
   process.env.MONGODB_URI || "mongodb+srv://aditi156y:p4kYaTT1TkqgPUgb@cluster0.1ysxj.mongodb.net/able-vista"; // Added db name

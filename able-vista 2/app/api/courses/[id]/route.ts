@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '../../../../lib/db'
-import Course from '../../../../models/Course'
-import { Chapter, Instructor, Lesson } from '../../../../models'
+import { Course, Chapter, Instructor, Lesson } from '../../../../models'
 import mongoose from 'mongoose'
 
 interface CourseResponse {
@@ -35,6 +34,28 @@ export async function GET(
         success: false,
         message: 'Course not found'
       }, { status: 404 })
+    }
+
+    // Check if instructor exists and is valid
+    if (!course.instructor) {
+      console.warn(`Course ${course._id} has no instructor assigned`)
+      // Set default instructor data to prevent frontend errors
+      course.instructor = {
+        title: 'Instructor Not Assigned',
+        company: '',
+        bio: 'This course does not have an assigned instructor yet.',
+        expertise: [],
+        experience: '',
+        avatar: '/placeholder-user.jpg',
+        socialLinks: {},
+        rating: 0,
+        totalStudents: 0,
+        totalCourses: 0,
+        totalReviews: 0,
+        isVerified: false,
+        isActive: false,
+        user: null
+      }
     }
 
     // Manually populate chapters and lessons for this course
@@ -76,6 +97,7 @@ export async function GET(
     console.log('Course found:', course.title)
     console.log('Chapters count:', course.chapters.length)
     console.log('Chapters:', course.chapters)
+    console.log('Instructor data:', course.instructor)
 
     return NextResponse.json({
       success: true,

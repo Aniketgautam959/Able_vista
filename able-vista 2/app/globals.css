@@ -74,6 +74,11 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.269 0 0);
   --sidebar-ring: oklch(0.65 0.15 270 / 0.5);
+  
+  /* Accessibility Variables */
+  --font-size-base: 16px;
+  --font-size-headings: 20px;
+  --font-size-body: 16px;
 }
 
 @theme {
@@ -122,4 +127,139 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Accessibility Styles */
+.high-contrast {
+  --background: oklch(0.05 0 0);
+  --foreground: oklch(0.95 0 0);
+  --card: oklch(0.1 0 0);
+  --card-foreground: oklch(0.95 0 0);
+  --border: oklch(0.8 0 0);
+  --muted: oklch(0.15 0 0);
+  --muted-foreground: oklch(0.8 0 0);
+}
+
+.high-contrast.dark {
+  --background: oklch(0.02 0 0);
+  --foreground: oklch(0.98 0 0);
+  --card: oklch(0.05 0 0);
+  --card-foreground: oklch(0.98 0 0);
+  --border: oklch(0.9 0 0);
+  --muted: oklch(0.1 0 0);
+  --muted-foreground: oklch(0.9 0 0);
+}
+
+.reduced-motion * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+.focus-visible *:focus {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Font Size Utilities */
+.text-base {
+  font-size: var(--font-size-base);
+}
+
+.text-lg {
+  font-size: var(--font-size-headings);
+}
+
+.text-xl, .text-2xl, .text-3xl, .text-4xl, .text-5xl, .text-6xl {
+  font-size: var(--font-size-headings);
+}
+
+/* Text-to-Speech Interactive Elements */
+[data-tts-enabled="true"] {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+[data-tts-enabled="true"]:hover {
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+/* Accessibility Toolbar Positioning */
+.accessibility-toolbar {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 1.5rem;
+  z-index: 50;
+  transition: all 0.3s ease;
+}
+
+.accessibility-toolbar:hover {
+  transform: scale(1.02);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .accessibility-toolbar {
+    bottom: 1rem;
+    left: 1rem;
+  }
+  
+  .accessibility-toolbar button {
+    width: 3rem !important;
+    height: 3rem !important;
+  }
+}
+
+/* Remove default button borders and shadows */
+.accessibility-toolbar button {
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  outline: none !important;
+}
+
+.accessibility-toolbar button:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2) !important;
+  transform: translateY(-1px);
+}
+
+.accessibility-toolbar button:focus {
+  outline: 2px solid var(--primary) !important;
+  outline-offset: 2px !important;
+}
+
+/* Dark theme specific shadows */
+.dark .accessibility-toolbar button {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark .accessibility-toolbar button:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Ensure buttons have proper contrast */
+.accessibility-toolbar button[data-state="open"] {
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+}
+
+/* High Contrast Focus Styles */
+.high-contrast *:focus {
+  outline: 4px solid var(--foreground);
+  outline-offset: 2px;
+}
+
+/* Reduced Motion Alternatives */
+.reduced-motion .animate-spin {
+  animation: none;
+}
+
+.reduced-motion .animate-pulse {
+  animation: none;
+}
+
+.reduced-motion .animate-bounce {
+  animation: none;
 }

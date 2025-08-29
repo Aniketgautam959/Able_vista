@@ -7,6 +7,7 @@ import Enrollment from './Enrollment';
 import Progress from './Progress';
 import Review from './Review';
 import UserProfile from './UserProfile';
+import UserSettings from './UserSettings';
 import AchievementModel, { UserAchievement } from './Achievement';
 import Feedback from './Feedback';
 
@@ -20,6 +21,7 @@ export {
   Progress,
   Review,
   UserProfile,
+  UserSettings,
   AchievementModel as Achievement,
   UserAchievement,
   Feedback

@@ -12,7 +12,6 @@ import {
   Mic,
   Users,
   ArrowRight,
-  Play,
   Clock,
 } from "lucide-react"
 import Link from "next/link"
@@ -71,10 +70,6 @@ export default function LandingPage() {
                 Start Learning Free
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Link>
-            </Button>
-            <Button size="lg" variant="outline" className="text-lg px-8 bg-transparent">
-              <Play className="mr-2 w-5 h-5" />
-              Watch Demo
             </Button>
           </div>
         </div>
@@ -195,7 +190,7 @@ export default function LandingPage() {
                   </div>
                 </div>
                 <Progress value={0} className="mb-4" />
-                <Button className="w-full">Enroll Now</Button>
+                <Button className="w-full">Start Learning</Button>
               </CardContent>
             </Card>
             <Card className="border-border hover:shadow-lg transition-shadow">
@@ -223,7 +218,7 @@ export default function LandingPage() {
                   </div>
                 </div>
                 <Progress value={0} className="mb-4" />
-                <Button className="w-full">Enroll Now</Button>
+                <Button className="w-full">Start Learning</Button>
               </CardContent>
             </Card>
             <Card className="border-border hover:shadow-lg transition-shadow">

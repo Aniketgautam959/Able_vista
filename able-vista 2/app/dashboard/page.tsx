@@ -15,12 +15,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
   BookOpen,
-  Play,
   Clock,
-  TrendingUp,
-  Target,
   Award,
-  Calendar,
   Bell,
   Settings,
   LogOut,
@@ -36,45 +32,6 @@ const dashboardData = {
   user: {
     name: "Alex Johnson",
     avatar: "/student-profile.png",
-    currentStreak: 12,
-    totalHours: 124,
-  },
-  recentCourses: [
-    {
-      id: 1,
-      title: "Full-Stack Web Development",
-      progress: 78,
-      nextLesson: "React Hooks Deep Dive",
-      timeLeft: "2h 30m",
-      image: "from-blue-500 to-purple-600",
-    },
-    {
-      id: 2,
-      title: "Python for Data Analysis",
-      progress: 45,
-      nextLesson: "Data Visualization with Matplotlib",
-      timeLeft: "1h 45m",
-      image: "from-yellow-500 to-orange-600",
-    },
-  ],
-  upcomingDeadlines: [
-    {
-      course: "Full-Stack Web Development",
-      assignment: "Final Project",
-      dueDate: "3 days",
-      urgent: true,
-    },
-    {
-      course: "Python for Data Analysis",
-      assignment: "Data Analysis Report",
-      dueDate: "1 week",
-      urgent: false,
-    },
-  ],
-  weeklyGoal: {
-    target: 10,
-    completed: 7,
-    percentage: 70,
   },
 };
 
@@ -155,6 +112,15 @@ interface OnboardingData {
   preferredLearningStyle: 'visual' | 'auditory' | 'kinesthetic' | 'reading';
 }
 
+interface UserStats {
+  totalHours: number;
+  enrolledCourses: number;
+  completedCourses: number;
+  inProgressCourses: number;
+  totalLessons: number;
+  completedLessons: number;
+}
+
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -164,6 +130,8 @@ export default function DashboardPage() {
   const [myCourses, setMyCourses] = useState<MyCourse[]>([]);
   const [coursesLoading, setCoursesLoading] = useState(true);
   const [withdrawingCourse, setWithdrawingCourse] = useState<string | null>(null);
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   // Fetch logged-in user and check for profile
   useEffect(() => {
@@ -222,6 +190,32 @@ export default function DashboardPage() {
     }
   }, [user]);
 
+  // Fetch User Stats (including total hours)
+  useEffect(() => {
+    const fetchUserStats = async () => {
+      try {
+        setStatsLoading(true);
+        const { data } = await axios.get("/api/user-stats", {
+          withCredentials: true
+        });
+        
+        if (data.success) {
+          setUserStats(data.data);
+        } else {
+          console.error("Error fetching user stats:", data.message);
+        }
+      } catch (error) {
+        console.error("Failed to fetch user stats:", error);
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchUserStats();
+    }
+  }, [user]);
+
   // Handle course withdrawal
   const handleWithdrawCourse = async (enrollmentId: string) => {
     try {
@@ -240,6 +234,14 @@ export default function DashboardPage() {
               : course
           )
         );
+
+        // Refresh user stats after withdrawal
+        const statsResponse = await axios.get("/api/user-stats", {
+          withCredentials: true
+        });
+        if (statsResponse.data.success) {
+          setUserStats(statsResponse.data.data);
+        }
       }
     } catch (error) {
       console.error("Failed to withdraw from course:", error);
@@ -266,7 +268,7 @@ export default function DashboardPage() {
       }
     } catch (error) {
       console.error("Failed to create user profile:", error);
-      // Optionally show error message
+      // Optionally show error message to user
     } finally {
       setCreatingProfile(false);
     }
@@ -332,8 +334,10 @@ export default function DashboardPage() {
             <Button variant="ghost" size="icon">
               <Bell className="w-5 h-5" />
             </Button>
-            <Button variant="ghost" size="icon">
-              <Settings className="w-5 h-5" />
+            <Button variant="ghost" size="icon" asChild>
+              <Link href="/settings">
+                <Settings className="w-5 h-5" />
+              </Link>
             </Button>
             <Button 
               variant="ghost" 
@@ -375,31 +379,19 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <Card className="border-border">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Current Streak
-                  </p>
-                  <p className="text-2xl font-bold text-primary">
-                    {userProfile?.stats.currentStreak || dashboardData.user.currentStreak} days
-                  </p>
-                </div>
-                <TrendingUp className="w-8 h-8 text-orange-600" />
-              </div>
-            </CardContent>
-          </Card>
-
+        {/* Quick Stats - Only 3 cards now */}
+        <div className="grid md:grid-cols-3 gap-6 mb-8">
           <Card className="border-border">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Hours</p>
                   <p className="text-2xl font-bold text-primary">
-                    {Math.round(myCourses.reduce((total, course) => total + course.enrollment.totalTimeSpent, 0) / 3600) || userProfile?.stats.totalHours || dashboardData.user.totalHours}h
+                    {statsLoading ? (
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                    ) : (
+                      `${userStats?.totalHours || 0}h`
+                    )}
                   </p>
                 </div>
                 <Clock className="w-8 h-8 text-blue-600" />
@@ -413,7 +405,7 @@ export default function DashboardPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">Enrolled Courses</p>
                   <p className="text-2xl font-bold text-primary">
-                    {myCourses.length}
+                    {userStats?.enrolledCourses || myCourses.length}
                   </p>
                 </div>
                 <BookOpen className="w-8 h-8 text-green-600" />
@@ -427,7 +419,7 @@ export default function DashboardPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">Completed</p>
                   <p className="text-2xl font-bold text-primary">
-                    {myCourses.filter(course => course.enrollment.status === 'completed').length}
+                    {userStats?.completedCourses || myCourses.filter(course => course.enrollment.status === 'completed').length}
                   </p>
                 </div>
                 <Award className="w-8 h-8 text-purple-600" />
@@ -436,9 +428,10 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* My Courses */}
-          <div className="lg:col-span-2 space-y-6">
+        {/* Main Content - Focus on My Courses */}
+        <div className="w-full">
+          {/* My Courses - Full width */}
+          <div className="space-y-6">
             <Card className="border-border">
               <CardHeader>
                 <CardTitle>My Courses</CardTitle>
@@ -547,115 +540,6 @@ export default function DashboardPage() {
                 )}
               </CardContent>
             </Card>
-
-            {/* Weekly Goal */}
-            <Card className="border-border">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Target className="w-5 h-5 mr-2" />
-                  Weekly Learning Goal
-                </CardTitle>
-                <CardDescription>
-                  Stay consistent with your learning
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-muted-foreground">
-                        {dashboardData.weeklyGoal.completed} of{" "}
-                        {dashboardData.weeklyGoal.target} hours completed
-                      </span>
-                      <span className="text-foreground font-medium">
-                        {dashboardData.weeklyGoal.percentage}%
-                      </span>
-                    </div>
-                    <Progress
-                      value={dashboardData.weeklyGoal.percentage}
-                      className="h-3"
-                    />
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Great progress! You need{" "}
-                    {dashboardData.weeklyGoal.target -
-                      dashboardData.weeklyGoal.completed}{" "}
-                    more hours to reach your weekly goal.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Upcoming Deadlines */}
-            <Card className="border-border">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Calendar className="w-5 h-5 mr-2" />
-                  Upcoming Deadlines
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {dashboardData.upcomingDeadlines.map((deadline, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <div
-                      className={`w-3 h-3 rounded-full mt-2 ${
-                        deadline.urgent ? "bg-red-500" : "bg-yellow-500"
-                      }`}
-                    />
-                    <div className="flex-1">
-                      <h4 className="font-medium text-foreground text-sm">
-                        {deadline.assignment}
-                      </h4>
-                      <p className="text-xs text-muted-foreground">
-                        {deadline.course}
-                      </p>
-                      <p
-                        className={`text-xs ${
-                          deadline.urgent ? "text-red-600" : "text-yellow-600"
-                        }`}>
-                        Due in {deadline.dueDate}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Quick Actions */}
-            <Card className="border-border">
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button
-                  className="w-full justify-start bg-transparent"
-                  variant="outline"
-                  asChild>
-                  <Link href="/courses">
-                    <BookOpen className="w-4 h-4 mr-2" />
-                    Browse Courses
-                  </Link>
-                </Button>
-                <Button
-                  className="w-full justify-start bg-transparent"
-                  variant="outline"
-                  asChild>
-                  <Link href="/profile">
-                    <Award className="w-4 h-4 mr-2" />
-                    View Certificates
-                  </Link>
-                </Button>
-                <Button
-                  className="w-full justify-start bg-transparent"
-                  variant="outline">
-                  <Settings className="w-4 h-4 mr-2" />
-                  Account Settings
-                </Button>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>
@@ -667,6 +551,7 @@ export default function DashboardPage() {
         onSubmit={handleOnboardingSubmit}
         loading={creatingProfile}
       />
+
     </div>
   );
 }

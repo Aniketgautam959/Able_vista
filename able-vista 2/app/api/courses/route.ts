@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '../../../lib/db'
-import Course from '../../../models/Course'
-import { Chapter, Instructor } from '../../../models'
+import { Course, Chapter, Instructor } from '../../../models'
 import mongoose from 'mongoose'
 
 interface CourseResponse {

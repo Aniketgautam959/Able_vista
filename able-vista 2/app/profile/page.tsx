@@ -1,318 +1,283 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import axios from "axios"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+import { useState, useEffect, useRef } from "react";
+import axios from "axios";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   BookOpen,
-  ArrowLeft,
-  Edit,
-  Save,
-  X,
-  Trophy,
   Clock,
   Target,
-  TrendingUp,
-  Calendar,
   Award,
-  Play,
-  CheckCircle,
-  Star,
-  BarChart3,
-  Loader2,
-  MapPin,
-  User,
-  Brain,
+  Bell,
+  Settings,
   LogOut,
-} from "lucide-react"
-import Link from "next/link"
+  ExternalLink,
+  Camera,
+  Save,
+  Edit,
+  X,
+  Loader2,
+  User,
+  MapPin,
+  Globe,
+  GraduationCap,
+  Eye,
+  Ear,
+  Hand,
+  BookOpen as BookOpenIcon,
+} from "lucide-react";
+import Link from "next/link";
 
-// API response types
-interface AuthUser {
-  _id: string
-  name: string
-  email: string
-  role: string
-  isEmailVerified: boolean
-  isActive: boolean
-  createdAt: string
-  updatedAt: string
-}
-
-interface ShowMeResponse {
-  user: AuthUser
-  error: string | null
+interface User {
+  _id: string;
+  name: string;
+  email: string;
 }
 
 interface UserProfile {
-  _id: string
-  user: AuthUser
-  bio: string
-  avatar: string
-  location: string
-  timezone: string
-  learningGoal: string
-  interests: string[]
-  skillLevel: 'beginner' | 'intermediate' | 'advanced'
-  preferredLearningStyle: 'visual' | 'auditory' | 'kinesthetic' | 'reading'
-  preferences: {
-    showProfile: boolean
-    showProgress: boolean
-  }
+  _id: string;
+  user: User;
+  bio?: string;
+  avatar: string;
+  location?: string;
+  timezone: string;
+  learningGoal?: string;
+  interests: string[];
+  skillLevel: 'beginner' | 'intermediate' | 'advanced';
+  preferredLearningStyle: 'visual' | 'auditory' | 'kinesthetic' | 'reading';
   stats: {
-    totalCourses: number
-    completedCourses: number
-    inProgressCourses: number
-    totalLessons: number
-    completedLessons: number
-    totalHours: number
-    currentStreak: number
-    longestStreak: number
-  }
-  createdAt: string
-  updatedAt: string
+    totalCourses: number;
+    completedCourses: number;
+    inProgressCourses: number;
+    totalLessons: number;
+    completedLessons: number;
+    totalHours: number;
+    currentStreak: number;
+    longestStreak: number;
+  };
 }
 
-interface UserProfileApiResponse {
-  success: boolean
-  message: string
-  data: UserProfile
+interface InProgressCourse {
+  course: {
+    _id: string;
+    title: string;
+    description: string;
+    image: string;
+    category: string;
+    level: string;
+    duration: string;
+    estimatedHours: number;
+  };
+  enrollment: {
+    _id: string;
+    progress: number;
+    totalTimeSpent: number;
+    lastAccessedAt: Date;
+    currentLesson?: string;
+    completedLessons: Array<{
+      lesson: string;
+      completedAt: Date;
+      score?: number;
+    }>;
+  };
+  nextLesson?: {
+    _id: string;
+    title: string;
+    description: string;
+    type: string;
+    duration: string;
+  };
+  timeToComplete: number;
 }
 
-// Mock course data (will be replaced with real API data later)
-const enrolledCourses = [
-  {
-    id: 2,
-    title: "AI & Machine Learning",
-    category: "AI",
-    progress: 35,
-    instructor: "Dr. Michael Chen",
-    totalLessons: 45,
-    completedLessons: 16,
-    lastAccessed: "2 hours ago",
-    status: "in-progress",
-    image: "from-green-500 to-teal-600",
-  },
-  {
-    id: 3,
-    title: "UI/UX Design Fundamentals",
-    category: "Design",
-    progress: 100,
-    instructor: "Alex Thompson",
-    totalLessons: 32,
-    completedLessons: 32,
-    lastAccessed: "1 week ago",
-    status: "completed",
-    image: "from-pink-500 to-rose-600",
-  },
-  {
-    id: 1,
-    title: "Full-Stack Web Development",
-    category: "Web Development",
-    progress: 78,
-    instructor: "Sarah Johnson",
-    totalLessons: 10,
-    completedLessons: 8,
-    lastAccessed: "3 days ago",
-    status: "in-progress",
-    image: "from-blue-500 to-purple-600",
-  },
-]
-
-const achievements = [
-  {
-    id: 1,
-    title: "First Course Completed",
-    description: "Completed your first course",
-    date: "Feb 2024",
-    icon: Trophy,
-  },
-  { id: 2, title: "Week Warrior", description: "7-day learning streak", date: "Mar 2024", icon: Target },
-  { id: 3, title: "Design Master", description: "Completed 3 design courses", date: "Mar 2024", icon: Award },
-  { id: 4, title: "Speed Learner", description: "Completed 5 lessons in one day", date: "Apr 2024", icon: TrendingUp },
-]
+interface InProgressData {
+  inProgressCourses: InProgressCourse[];
+  totalInProgress: number;
+  totalTimeSpent: number;
+  averageProgress: number;
+}
 
 export default function ProfilePage() {
-  const [isEditing, setIsEditing] = useState(false)
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [editedProfile, setEditedProfile] = useState({
-    name: '',
+  const [user, setUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [inProgressData, setInProgressData] = useState<InProgressData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [inProgressLoading, setInProgressLoading] = useState(true);
+  
+  // Form state
+  const [formData, setFormData] = useState({
     bio: '',
     location: '',
+    timezone: '',
     learningGoal: '',
-  })
+    interests: '',
+    skillLevel: 'beginner' as const,
+    preferredLearningStyle: 'visual' as const,
+    avatar: ''
+  });
 
-  // Fetch authenticated user and then their profile data
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch user and profile data
   useEffect(() => {
-    const fetchUserAndProfile = async () => {
+    const fetchData = async () => {
       try {
-        setLoading(true)
+        setLoading(true);
         
-        // First, get the authenticated user from showme API
-        const authResponse = await fetch('/api/auth/showme')
-        if (!authResponse.ok) {
-          throw new Error('Failed to authenticate user')
-        }
-        
-        const authData: ShowMeResponse = await authResponse.json()
-        if (authData.error || !authData.user) {
-          throw new Error(authData.error || 'User not authenticated')
-        }
-        
-        const userId = authData.user._id
-        
-        // Then, fetch the user profile using the user ID
-        const profileResponse = await fetch(`/api/user-profiles?user=${userId}`)
-        if (!profileResponse.ok) {
-          if (profileResponse.status === 404) {
-            // User profile doesn't exist yet, show message
-            setError('User profile not found. Please complete your profile setup.')
-          } else {
-            throw new Error('Failed to fetch user profile')
-          }
-          return
-        }
-        
-        const profileData: UserProfileApiResponse = await profileResponse.json()
+        // Get authenticated user
+        const { data: userData } = await axios.get("/api/auth/showme");
+        setUser(userData.user);
+
+        // Get user profile
+        const { data: profileData } = await axios.get("/api/profile");
         if (profileData.success) {
-          setUserProfile(profileData.data)
-          // Initialize edited profile with current data
-          setEditedProfile({
-            name: profileData.data.user.name,
-            bio: profileData.data.bio,
-            location: profileData.data.location,
-            learningGoal: profileData.data.learningGoal,
-          })
-        } else {
-          setError(profileData.message || 'Failed to fetch user profile')
+          setUserProfile(profileData.data);
+          // Initialize form data
+          setFormData({
+            bio: profileData.data.bio || '',
+            location: profileData.data.location || '',
+            timezone: profileData.data.timezone || '',
+            learningGoal: profileData.data.learningGoal || '',
+            interests: profileData.data.interests?.join(', ') || '',
+            skillLevel: profileData.data.skillLevel || 'beginner',
+            preferredLearningStyle: profileData.data.preferredLearningStyle || 'visual',
+            avatar: profileData.data.avatar || ''
+          });
         }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred')
+
+        // Get in-progress courses
+        const { data: inProgressData } = await axios.get("/api/profile/in-progress");
+        if (inProgressData.success) {
+          setInProgressData(inProgressData.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch profile data:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
+        setInProgressLoading(false);
       }
+    };
+
+    fetchData();
+  }, []);
+
+  // Handle profile picture upload
+  const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // For now, we'll use a placeholder approach
+      // In a real app, you'd upload to a service like Cloudinary or AWS S3
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setFormData(prev => ({ ...prev, avatar: result }));
+      };
+      reader.readAsDataURL(file);
     }
+  };
 
-    fetchUserAndProfile()
-  }, [])
+  // Handle form submission
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      
+      const response = await axios.put("/api/profile", {
+        ...formData,
+        interests: formData.interests.split(',').map(i => i.trim()).filter(i => i)
+      });
 
-  const handleSaveProfile = () => {
-    // TODO: Implement profile update API call
-    setIsEditing(false)
-  }
-
-  const handleCancelEdit = () => {
-    if (userProfile) {
-      setEditedProfile({
-        name: userProfile.user.name,
-        bio: userProfile.bio,
-        location: userProfile.location,
-        learningGoal: userProfile.learningGoal,
-      })
+      if (response.data.success) {
+        setUserProfile(response.data.data);
+        setEditing(false);
+        // Show success message (you could add a toast notification here)
+      }
+    } catch (error) {
+      console.error("Failed to update profile:", error);
+      // Show error message
+    } finally {
+      setSaving(false);
     }
-    setIsEditing(false)
-  }
+  };
 
   // Handle logout
   const handleLogout = async () => {
     try {
       const response = await axios.post("/api/auth/logout");
       if (response.status === 200) {
-        // Redirect to login page
         window.location.href = "/login";
       }
     } catch (error) {
       console.error("Logout error:", error);
-      // Still redirect to login page even if logout fails
       window.location.href = "/login";
     }
   };
 
-  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading profile...</p>
         </div>
       </div>
-    )
+    );
   }
-
-  // Error state
-  if (error || !userProfile) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <User className="w-8 h-8 text-destructive" />
-          </div>
-          <h3 className="text-lg font-semibold text-foreground mb-2">
-            {error?.includes('not found') ? 'Profile Not Found' : 'Error loading profile'}
-          </h3>
-          <p className="text-muted-foreground mb-4">
-            {error || 'Profile not found'}
-          </p>
-          <div className="space-y-2">
-            {error?.includes('not found') ? (
-              <Button asChild>
-                <Link href="/dashboard">
-                  <User className="w-4 h-4 mr-2" />
-                  Complete Profile Setup
-                </Link>
-              </Button>
-            ) : (
-              <Button onClick={() => window.location.reload()}>Try Again</Button>
-            )}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  const completionRate = userProfile.stats.totalLessons > 0 
-    ? Math.round((userProfile.stats.completedLessons / userProfile.stats.totalLessons) * 100)
-    : 0
-
-  const inProgressCourses = enrolledCourses.filter((course) => course.status === "in-progress")
-  const completedCourses = enrolledCourses.filter((course) => course.status === "completed")
-
-  // Format join date
-  const joinDate = new Date(userProfile.createdAt).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long'
-  })
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link
-            href="/dashboard"
-            className="flex items-center space-x-2 text-foreground hover:text-primary transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span>Back to Dashboard</span>
-          </Link>
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <BookOpen className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold text-foreground">Able Vista</span>
+            <span className="text-xl font-bold text-foreground">
+              Able Vista
+            </span>
           </div>
+          <nav className="hidden md:flex items-center space-x-6">
+            <Link
+              href="/dashboard"
+              className="text-muted-foreground hover:text-foreground transition-colors">
+              Dashboard
+            </Link>
+            <Link
+              href="/courses"
+              className="text-muted-foreground hover:text-foreground transition-colors">
+              Courses
+            </Link>
+          </nav>
           <div className="flex items-center space-x-3">
+            <Button variant="ghost" size="icon">
+              <Bell className="w-5 h-5" />
+            </Button>
+            <Button variant="ghost" size="icon" asChild>
+              <Link href="/settings">
+                <Settings className="w-5 h-5" />
+              </Link>
+            </Button>
             <Button 
               variant="ghost" 
               size="icon"
@@ -322,6 +287,19 @@ export default function ProfilePage() {
             >
               <LogOut className="w-5 h-5" />
             </Button>
+            <Avatar className="w-8 h-8">
+              <AvatarImage
+                src={userProfile?.avatar || "/placeholder.svg"}
+              />
+              <AvatarFallback>
+                {user?.name
+                  ? user.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                  : "U"}
+              </AvatarFallback>
+            </Avatar>
           </div>
         </div>
       </header>
@@ -329,422 +307,436 @@ export default function ProfilePage() {
       <div className="container mx-auto px-4 py-8">
         {/* Profile Header */}
         <div className="mb-8">
-          <Card className="border-border">
-            <CardContent className="p-8">
-              <div className="flex flex-col md:flex-row items-start md:items-center space-y-6 md:space-y-0 md:space-x-8">
-                <Avatar className="w-24 h-24">
-                  <AvatarImage src={userProfile.avatar || "/placeholder.svg"} />
-                  <AvatarFallback className="text-2xl">
-                    {userProfile.user.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
-                  </AvatarFallback>
-                </Avatar>
+          <div className="flex items-center space-x-6">
+            <div className="relative">
+              <Avatar className="w-24 h-24">
+                <AvatarImage
+                  src={editing ? formData.avatar : userProfile?.avatar || "/placeholder.svg"}
+                />
+                <AvatarFallback className="text-2xl">
+                  {user?.name
+                    ? user.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                    : "U"}
+                </AvatarFallback>
+              </Avatar>
+              {editing && (
+                <Button
+                  size="icon"
+                  className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Camera className="w-4 h-4" />
+                </Button>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarUpload}
+              />
+            </div>
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold text-foreground mb-2">
+                {user?.name}
+              </h1>
+              <p className="text-muted-foreground mb-4">
+                {user?.email}
+              </p>
+              <div className="flex items-center space-x-4">
+                {!editing ? (
+                  <Button onClick={() => setEditing(true)}>
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit Profile
+                  </Button>
+                ) : (
+                  <div className="flex space-x-2">
+                    <Button onClick={handleSave} disabled={saving}>
+                      {saving ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4 mr-2" />
+                      )}
+                      Save Changes
+                    </Button>
+                    <Button variant="outline" onClick={() => setEditing(false)}>
+                      <X className="w-4 h-4 mr-2" />
+                      Cancel
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
 
-                <div className="flex-1">
-                  {isEditing ? (
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="name">Name</Label>
-                        <Input
-                          id="name"
-                          value={editedProfile.name}
-                          onChange={(e) => setEditedProfile({ ...editedProfile, name: e.target.value })}
-                          className="bg-input border-border"
-                        />
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Profile Information */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Personal Information */}
+            <Card className="border-border">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <User className="w-5 h-5 mr-2" />
+                  Personal Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">
+                      Bio
+                    </label>
+                    {editing ? (
+                      <Textarea
+                        value={formData.bio}
+                        onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
+                        placeholder="Tell us about yourself..."
+                        rows={3}
+                      />
+                    ) : (
+                      <p className="text-muted-foreground">
+                        {userProfile?.bio || "No bio added yet."}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">
+                      Location
+                    </label>
+                    {editing ? (
+                      <Input
+                        value={formData.location}
+                        onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                        placeholder="Your location"
+                      />
+                    ) : (
+                      <p className="text-muted-foreground">
+                        {userProfile?.location || "No location set."}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">
+                      Timezone
+                    </label>
+                    {editing ? (
+                      <Select
+                        value={formData.timezone}
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, timezone: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select timezone" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="UTC">UTC</SelectItem>
+                          <SelectItem value="EST">EST</SelectItem>
+                          <SelectItem value="PST">PST</SelectItem>
+                          <SelectItem value="GMT">GMT</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <p className="text-muted-foreground">
+                        {userProfile?.timezone || "No timezone set."}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">
+                      Learning Goal
+                    </label>
+                    {editing ? (
+                      <Input
+                        value={formData.learningGoal}
+                        onChange={(e) => setFormData(prev => ({ ...prev, learningGoal: e.target.value }))}
+                        placeholder="Your learning goal"
+                      />
+                    ) : (
+                      <p className="text-muted-foreground">
+                        {userProfile?.learningGoal || "No learning goal set."}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">
+                      Skill Level
+                    </label>
+                    {editing ? (
+                      <Select
+                        value={formData.skillLevel}
+                        onValueChange={(value: 'beginner' | 'intermediate' | 'advanced') => 
+                          setFormData(prev => ({ ...prev, skillLevel: value }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="beginner">Beginner</SelectItem>
+                          <SelectItem value="intermediate">Intermediate</SelectItem>
+                          <SelectItem value="advanced">Advanced</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Badge variant="outline" className="capitalize">
+                        {userProfile?.skillLevel || "Not set"}
+                      </Badge>
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">
+                      Learning Style
+                    </label>
+                    {editing ? (
+                      <Select
+                        value={formData.preferredLearningStyle}
+                        onValueChange={(value: 'visual' | 'auditory' | 'kinesthetic' | 'reading') => 
+                          setFormData(prev => ({ ...prev, preferredLearningStyle: value }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="visual">Visual</SelectItem>
+                          <SelectItem value="auditory">Auditory</SelectItem>
+                          <SelectItem value="kinesthetic">Kinesthetic</SelectItem>
+                          <SelectItem value="reading">Reading</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="flex items-center space-x-2">
+                        {userProfile?.preferredLearningStyle === 'visual' && <Eye className="w-4 h-4" />}
+                        {userProfile?.preferredLearningStyle === 'auditory' && <Ear className="w-4 h-4" />}
+                        {userProfile?.preferredLearningStyle === 'kinesthetic' && <Hand className="w-4 h-4" />}
+                        {userProfile?.preferredLearningStyle === 'reading' && <BookOpenIcon className="w-4 h-4" />}
+                        <span className="capitalize">
+                          {userProfile?.preferredLearningStyle || "Not set"}
+                        </span>
                       </div>
-                      <div>
-                        <Label htmlFor="bio">Bio</Label>
-                        <Textarea
-                          id="bio"
-                          value={editedProfile.bio}
-                          onChange={(e) => setEditedProfile({ ...editedProfile, bio: e.target.value })}
-                          className="bg-input border-border"
-                          rows={3}
-                        />
-                      </div>
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="location">Location</Label>
-                          <Input
-                            id="location"
-                            value={editedProfile.location}
-                            onChange={(e) => setEditedProfile({ ...editedProfile, location: e.target.value })}
-                            className="bg-input border-border"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="goal">Learning Goal</Label>
-                          <Input
-                            id="goal"
-                            value={editedProfile.learningGoal}
-                            onChange={(e) => setEditedProfile({ ...editedProfile, learningGoal: e.target.value })}
-                            className="bg-input border-border"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button onClick={handleSaveProfile}>
-                          <Save className="w-4 h-4 mr-2" />
-                          Save Changes
-                        </Button>
-                        <Button variant="outline" onClick={handleCancelEdit}>
-                          <X className="w-4 h-4 mr-2" />
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    Interests
+                  </label>
+                  {editing ? (
+                    <Input
+                      value={formData.interests}
+                      onChange={(e) => setFormData(prev => ({ ...prev, interests: e.target.value }))}
+                      placeholder="e.g., Web Development, AI, Design (comma separated)"
+                    />
                   ) : (
-                    <div>
-                      <div className="flex items-center justify-between mb-4">
-                        <h1 className="text-3xl font-bold text-foreground">{userProfile.user.name}</h1>
-                        <Button variant="outline" onClick={() => setIsEditing(true)}>
-                          <Edit className="w-4 h-4 mr-2" />
-                          Edit Profile
-                        </Button>
-                      </div>
-                      <p className="text-lg text-muted-foreground mb-4">{userProfile.bio}</p>
-                      <div className="grid md:grid-cols-3 gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center">
-                          <Calendar className="w-4 h-4 mr-2" />
-                          Joined {joinDate}
-                        </div>
-                        <div className="flex items-center">
-                          <MapPin className="w-4 h-4 mr-2" />
-                          {userProfile.location}
-                        </div>
-                        <div className="flex items-center">
-                          <Target className="w-4 h-4 mr-2" />
-                          Goal: {userProfile.learningGoal}
-                        </div>
-                      </div>
-
-                      {/* Additional Profile Info */}
-                      <div className="mt-6 grid md:grid-cols-2 gap-4">
-                        <div className="flex items-center space-x-2">
-                          <Brain className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">
-                            Skill Level: <span className="text-foreground font-medium capitalize">{userProfile.skillLevel}</span>
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <User className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">
-                            Learning Style: <span className="text-foreground font-medium capitalize">{userProfile.preferredLearningStyle}</span>
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Interests */}
-                      {userProfile.interests.length > 0 && (
-                        <div className="mt-4">
-                          <Label className="text-sm font-medium">Interests</Label>
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {userProfile.interests.map((interest, index) => (
-                              <Badge key={index} variant="secondary">
-                                {interest}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
+                    <div className="flex flex-wrap gap-2">
+                      {userProfile?.interests && userProfile.interests.length > 0 ? (
+                        userProfile.interests.map((interest, index) => (
+                          <Badge key={index} variant="secondary">
+                            {interest}
+                          </Badge>
+                        ))
+                      ) : (
+                        <p className="text-muted-foreground">No interests added yet.</p>
                       )}
                     </div>
                   )}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
 
-        {/* Dashboard Stats */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="border-border">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Courses Completed</p>
-                  <p className="text-2xl font-bold text-primary">{userProfile.stats.completedCourses}</p>
-                </div>
-                <CheckCircle className="w-8 h-8 text-green-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">In Progress</p>
-                  <p className="text-2xl font-bold text-primary">{userProfile.stats.inProgressCourses}</p>
-                </div>
-                <Play className="w-8 h-8 text-blue-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Learning Hours</p>
-                  <p className="text-2xl font-bold text-primary">{userProfile.stats.totalHours}</p>
-                </div>
-                <Clock className="w-8 h-8 text-orange-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Current Streak</p>
-                  <p className="text-2xl font-bold text-primary">{userProfile.stats.currentStreak} days</p>
-                </div>
-                <TrendingUp className="w-8 h-8 text-purple-600" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Progress Overview */}
-        <div className="grid lg:grid-cols-3 gap-8 mb-8">
-          <div className="lg:col-span-2">
+            {/* In-Progress Courses */}
             <Card className="border-border">
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <BarChart3 className="w-5 h-5 mr-2" />
-                  Learning Progress
+                  <Target className="w-5 h-5 mr-2" />
+                  In-Progress Courses
                 </CardTitle>
+                <CardDescription>
+                  Continue your learning journey
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-6">
-                  <div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-muted-foreground">Overall Completion</span>
-                      <span className="text-foreground font-medium">{completionRate}%</span>
-                    </div>
-                    <Progress value={completionRate} className="h-3" />
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {userProfile.stats.completedLessons} of {userProfile.stats.totalLessons} lessons completed
-                    </div>
+                {inProgressLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                    <span>Loading in-progress courses...</span>
                   </div>
-
-                  <div className="grid md:grid-cols-3 gap-4 text-center">
-                    <div className="p-4 bg-muted/30 rounded-lg">
-                      <div className="text-2xl font-bold text-primary">{userProfile.stats.totalCourses}</div>
-                      <div className="text-sm text-muted-foreground">Total Enrolled</div>
-                    </div>
-                    <div className="p-4 bg-muted/30 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600">{userProfile.stats.completedCourses}</div>
-                      <div className="text-sm text-muted-foreground">Completed</div>
-                    </div>
-                    <div className="p-4 bg-muted/30 rounded-lg">
-                      <div className="text-2xl font-bold text-blue-600">{userProfile.stats.inProgressCourses}</div>
-                      <div className="text-sm text-muted-foreground">In Progress</div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div>
-            <Card className="border-border">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Award className="w-5 h-5 mr-2" />
-                  Achievements
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {achievements.slice(0, 3).map((achievement) => (
-                    <div key={achievement.id} className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                        <achievement.icon className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium text-foreground text-sm">{achievement.title}</h4>
-                        <p className="text-xs text-muted-foreground">{achievement.description}</p>
-                      </div>
-                    </div>
-                  ))}
-                  <Button variant="outline" className="w-full bg-transparent" size="sm">
-                    View All Achievements
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Course Tabs */}
-        <Tabs defaultValue="in-progress" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="in-progress">In Progress ({inProgressCourses.length})</TabsTrigger>
-            <TabsTrigger value="completed">Completed ({completedCourses.length})</TabsTrigger>
-            <TabsTrigger value="all">All Courses ({enrolledCourses.length})</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="in-progress" className="space-y-4">
-            {inProgressCourses.map((course) => (
-              <Card key={course.id} className="border-border hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start space-x-4">
-                    <div className={`w-16 h-16 bg-gradient-to-br ${course.image} rounded-lg flex-shrink-0`} />
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h3 className="font-semibold text-foreground mb-1">{course.title}</h3>
-                          <p className="text-sm text-muted-foreground">by {course.instructor}</p>
-                        </div>
-                        <Badge variant="secondary">{course.category}</Badge>
-                      </div>
-                      <div className="space-y-3">
-                        <div>
-                          <div className="flex justify-between text-sm mb-1">
-                            <span className="text-muted-foreground">Progress</span>
-                            <span className="text-foreground font-medium">{course.progress}%</span>
-                          </div>
-                          <Progress value={course.progress} className="h-2" />
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {course.completedLessons} of {course.totalLessons} lessons completed
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Last accessed {course.lastAccessed}</span>
-                          <Button size="sm" asChild>
-                            <Link href={`/courses/${course.id}`}>
-                              <Play className="w-4 h-4 mr-2" />
-                              Continue
-                            </Link>
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </TabsContent>
-
-          <TabsContent value="completed" className="space-y-4">
-            {completedCourses.map((course) => (
-              <Card key={course.id} className="border-border hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start space-x-4">
-                    <div className={`w-16 h-16 bg-gradient-to-br ${course.image} rounded-lg flex-shrink-0 relative`}>
-                      <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-600 rounded-full flex items-center justify-center">
-                        <CheckCircle className="w-4 h-4 text-white" />
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h3 className="font-semibold text-foreground mb-1">{course.title}</h3>
-                          <p className="text-sm text-muted-foreground">by {course.instructor}</p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Badge variant="secondary">{course.category}</Badge>
-                          <Badge variant="default" className="bg-green-600">
-                            Completed
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                          <span>{course.totalLessons} lessons completed</span>
-                          <span>Completed {course.lastAccessed}</span>
-                        </div>
-                        <div className="flex space-x-2">
-                          <Button size="sm" variant="outline">
-                            <Award className="w-4 h-4 mr-2" />
-                            Certificate
-                          </Button>
-                          <Button size="sm" variant="outline" asChild>
-                            <Link href={`/courses/${course.id}`}>
-                              <Star className="w-4 h-4 mr-2" />
-                              Review
-                            </Link>
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </TabsContent>
-
-          <TabsContent value="all" className="space-y-4">
-            {enrolledCourses.map((course) => (
-              <Card key={course.id} className="border-border hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start space-x-4">
-                    <div className={`w-16 h-16 bg-gradient-to-br ${course.image} rounded-lg flex-shrink-0 relative`}>
-                      {course.status === "completed" && (
-                        <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-600 rounded-full flex items-center justify-center">
-                          <CheckCircle className="w-4 h-4 text-white" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h3 className="font-semibold text-foreground mb-1">{course.title}</h3>
-                          <p className="text-sm text-muted-foreground">by {course.instructor}</p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Badge variant="secondary">{course.category}</Badge>
-                          <Badge
-                            variant={course.status === "completed" ? "default" : "outline"}
-                            className={course.status === "completed" ? "bg-green-600" : ""}
-                          >
-                            {course.status === "completed" ? "Completed" : "In Progress"}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        {course.status === "in-progress" && (
-                          <div>
-                            <div className="flex justify-between text-sm mb-1">
-                              <span className="text-muted-foreground">Progress</span>
-                              <span className="text-foreground font-medium">{course.progress}%</span>
+                ) : inProgressData?.inProgressCourses && inProgressData.inProgressCourses.length > 0 ? (
+                  <div className="space-y-4">
+                    {inProgressData.inProgressCourses.map((item) => (
+                      <div
+                        key={item.course._id}
+                        className="flex items-center space-x-4 p-4 bg-muted/30 rounded-lg">
+                        <div
+                          className={`w-16 h-16 bg-gradient-to-br ${item.course.image} rounded-lg flex-shrink-0`}
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-foreground mb-1">
+                                {item.course.title}
+                              </h3>
+                              <p className="text-sm text-muted-foreground line-clamp-2">
+                                {item.course.description}
+                              </p>
                             </div>
-                            <Progress value={course.progress} className="h-2" />
+                            <Badge variant="secondary">
+                              {item.course.level}
+                            </Badge>
                           </div>
-                        )}
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">
-                            {course.completedLessons} of {course.totalLessons} lessons completed
-                          </span>
-                          <Button size="sm" asChild>
-                            <Link href={`/courses/${course.id}`}>
-                              {course.status === "completed" ? (
-                                <>
-                                  <Star className="w-4 h-4 mr-2" />
-                                  Review
-                                </>
-                              ) : (
-                                <>
-                                  <Play className="w-4 h-4 mr-2" />
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1 mr-4">
+                              <div className="flex justify-between text-sm mb-1">
+                                <span className="text-muted-foreground">
+                                  Progress
+                                </span>
+                                <span className="text-foreground font-medium">
+                                  {item.enrollment.progress}%
+                                </span>
+                              </div>
+                              <Progress value={item.enrollment.progress} className="h-2" />
+                            </div>
+                            <div className="flex flex-col gap-2">
+                              <Button 
+                                size="sm" 
+                                asChild
+                                className="bg-primary hover:bg-primary/90"
+                              >
+                                <Link href={`/courses/${item.course._id}`}>
+                                  <ExternalLink className="w-4 h-4 mr-2" />
                                   Continue
-                                </>
-                              )}
-                            </Link>
-                          </Button>
+                                </Link>
+                              </Button>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+                            <span>{item.course.category} • {item.course.duration}</span>
+                            <span>~{item.timeToComplete}h remaining</span>
+                          </div>
+                          
+                          {item.nextLesson && (
+                            <div className="mt-2 p-2 bg-blue-50 rounded text-xs">
+                              <span className="font-medium text-blue-800">Next:</span> {item.nextLesson.title}
+                            </div>
+                          )}
                         </div>
                       </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No in-progress courses</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Start a course to see your progress here!
+                    </p>
+                    <Button asChild>
+                      <Link href="/courses">Browse Courses</Link>
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Profile Stats */}
+            <Card className="border-border">
+              <CardHeader>
+                <CardTitle>Profile Stats</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-primary">
+                      {userProfile?.stats.totalCourses || 0}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Total Courses</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-primary">
+                      {userProfile?.stats.completedCourses || 0}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Completed</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-primary">
+                      {userProfile?.stats.totalLessons || 0}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Total Lessons</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-primary">
+                      {userProfile?.stats.totalHours || 0}h
+                    </div>
+                    <div className="text-sm text-muted-foreground">Total Hours</div>
+                  </div>
+                </div>
+                
+                {inProgressData && (
+                  <div className="pt-4 border-t">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-primary">
+                        {inProgressData.averageProgress}%
+                      </div>
+                      <div className="text-sm text-muted-foreground">Average Progress</div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </TabsContent>
-        </Tabs>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card className="border-border">
+              <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button
+                  className="w-full justify-start bg-transparent"
+                  variant="outline"
+                  asChild>
+                  <Link href="/dashboard">
+                    <BookOpen className="w-4 h-4 mr-2" />
+                    Back to Dashboard
+                  </Link>
+                </Button>
+                <Button
+                  className="w-full justify-start bg-transparent"
+                  variant="outline"
+                  asChild>
+                  <Link href="/courses">
+                    <BookOpen className="w-4 h-4 mr-2" />
+                    Browse Courses
+                  </Link>
+                </Button>
+                <Button
+                  className="w-full justify-start bg-transparent"
+                  variant="outline"
+                  asChild>
+                  <Link href="/account-settings">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Account Settings
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </div>
-  )
+  );
 }

@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Star, BookOpen, Search, Filter, Clock, Users, Play, CheckCircle, ArrowLeft, Loader2, LogOut } from "lucide-react"
 import Link from "next/link"
 
+
 // API response types
 interface Instructor {
   _id: string
@@ -303,7 +304,6 @@ export default function CoursesPage() {
                       {course.rating > 0 ? course.rating.toFixed(1) : 'New'}
                     </span>
                   </div>
-                  <span className="text-lg font-bold text-primary">${course.price}</span>
                 </div>
                 <CardTitle className="line-clamp-2">{course.title}</CardTitle>
                 <CardDescription className="line-clamp-2">{course.description}</CardDescription>
@@ -403,6 +403,7 @@ export default function CoursesPage() {
           </div>
         )}
       </div>
+
     </div>
   )
 }
