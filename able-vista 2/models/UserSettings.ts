@@ -181,7 +181,4 @@ const userSettingsSchema = new Schema<IUserSettings>({
   timestamps: true
 });
 
-// Create index for faster queries
-userSettingsSchema.index({ user: 1 });
-
 export default mongoose.models.UserSettings || mongoose.model<IUserSettings>('UserSettings', userSettingsSchema);
