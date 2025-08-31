@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '../../../../lib/db'
 import { Enrollment } from '../../../../models'
+import { validateAuth } from '../../../../lib/auth'
 
 interface EnrollmentResponse {
   success: boolean
@@ -16,6 +17,15 @@ export async function GET(
   try {
     await dbConnect()
 
+    // Validate authentication
+    const authResult = await validateAuth(request)
+    if (!authResult.isValid) {
+      return NextResponse.json({
+        success: false,
+        message: authResult.error
+      }, { status: 401 })
+    }
+
     const enrollment = await Enrollment.findById(params.id)
       .populate('user', 'name email')
       .populate('course', 'title description image')
@@ -27,6 +37,14 @@ export async function GET(
         success: false,
         message: 'Enrollment not found'
       }, { status: 404 })
+    }
+
+    // Verify the enrollment belongs to the authenticated user
+    if (enrollment.user._id.toString() !== authResult.user!.userId) {
+      return NextResponse.json({
+        success: false,
+        message: 'Unauthorized access to enrollment'
+      }, { status: 403 })
     }
 
     return NextResponse.json({
@@ -52,6 +70,15 @@ export async function PUT(
   try {
     await dbConnect()
 
+    // Validate authentication
+    const authResult = await validateAuth(request)
+    if (!authResult.isValid) {
+      return NextResponse.json({
+        success: false,
+        message: authResult.error
+      }, { status: 401 })
+    }
+
     const body = await request.json()
     const { status, currentLesson, completedLessons } = body
 
@@ -61,6 +88,14 @@ export async function PUT(
         success: false,
         message: 'Enrollment not found'
       }, { status: 404 })
+    }
+
+    // Verify the enrollment belongs to the authenticated user
+    if (enrollment.user.toString() !== authResult.user!.userId) {
+      return NextResponse.json({
+        success: false,
+        message: 'Unauthorized access to enrollment'
+      }, { status: 403 })
     }
 
     // Update fields
@@ -102,12 +137,29 @@ export async function DELETE(
   try {
     await dbConnect()
 
+    // Validate authentication
+    const authResult = await validateAuth(request)
+    if (!authResult.isValid) {
+      return NextResponse.json({
+        success: false,
+        message: authResult.error
+      }, { status: 401 })
+    }
+
     const enrollment = await Enrollment.findById(params.id)
     if (!enrollment) {
       return NextResponse.json({
         success: false,
         message: 'Enrollment not found'
       }, { status: 404 })
+    }
+
+    // Verify the enrollment belongs to the authenticated user
+    if (enrollment.user.toString() !== authResult.user!.userId) {
+      return NextResponse.json({
+        success: false,
+        message: 'Unauthorized access to enrollment'
+      }, { status: 403 })
     }
 
     await Enrollment.findByIdAndDelete(params.id)

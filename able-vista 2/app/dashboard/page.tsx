@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -216,23 +216,17 @@ export default function DashboardPage() {
     }
   }, [user]);
 
-  // Handle course withdrawal
+  // Handle course removal
   const handleWithdrawCourse = async (enrollmentId: string) => {
     try {
       setWithdrawingCourse(enrollmentId);
       
-      const response = await axios.put(`/api/enrollments/${enrollmentId}`, {
-        status: 'dropped'
-      });
+      const response = await axios.delete(`/api/enrollments/${enrollmentId}`);
 
       if (response.data.success) {
-        // Update the local state to reflect the withdrawal
+        // Remove the course from local state
         setMyCourses(prevCourses => 
-          prevCourses.map(course => 
-            course.enrollment._id === enrollmentId 
-              ? { ...course, enrollment: { ...course.enrollment, status: 'dropped' as const } }
-              : course
-          )
+          prevCourses.filter(course => course.enrollment._id !== enrollmentId)
         );
 
         // Refresh user stats after withdrawal
@@ -244,7 +238,7 @@ export default function DashboardPage() {
         }
       }
     } catch (error) {
-      console.error("Failed to withdraw from course:", error);
+      console.error("Failed to remove course:", error);
       // Optionally show error message to user
     } finally {
       setWithdrawingCourse(null);
@@ -481,19 +475,10 @@ export default function DashboardPage() {
                           </Badge>
                         </div>
                         
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 mr-4">
-                            <div className="flex justify-between text-sm mb-1">
-                              <span className="text-muted-foreground">
-                                Progress
-                              </span>
-                              <span className="text-foreground font-medium">
-                                {enrollment.progress}%
-                              </span>
-                            </div>
-                            <Progress value={enrollment.progress} className="h-2" />
-                          </div>
-                          <div className="flex flex-col gap-2">
+                                                 <div className="flex items-center justify-between">
+                           <div className="flex-1 mr-4">
+                           </div>
+                           <div className="flex flex-col gap-2">
                             <Button 
                               size="sm" 
                               asChild
@@ -504,20 +489,20 @@ export default function DashboardPage() {
                                 Go to Course
                               </Link>
                             </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handleWithdrawCourse(enrollment._id)}
-                              disabled={withdrawingCourse === enrollment._id}
-                              className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
-                            >
-                              {withdrawingCourse === enrollment._id ? (
-                                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                              ) : (
-                                <X className="w-4 h-4 mr-2" />
-                              )}
-                              Withdraw
-                            </Button>
+                                                         <Button 
+                               size="sm" 
+                               variant="outline"
+                               onClick={() => handleWithdrawCourse(enrollment._id)}
+                               disabled={withdrawingCourse === enrollment._id}
+                               className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+                             >
+                               {withdrawingCourse === enrollment._id ? (
+                                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                               ) : (
+                                 <X className="w-4 h-4 mr-2" />
+                               )}
+                               Remove
+                             </Button>
                           </div>
                         </div>
                         

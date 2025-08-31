@@ -160,6 +160,8 @@ export default function CoursePage() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
   const [enrollmentSuccess, setEnrollmentSuccess] = useState(false)
   const [enrollmentError, setEnrollmentError] = useState<string | null>(null)
+  const [withdrawing, setWithdrawing] = useState(false)
+  const [enrollmentId, setEnrollmentId] = useState<string | null>(null)
 
   // Get enrollment count data
   const { enrollmentStats, loading: enrollmentCountLoading } = useEnrollmentCount(courseId)
@@ -185,7 +187,13 @@ export default function CoursePage() {
             const enrollmentResponse = await fetch(`/api/enrollments?user=${authData.user._id}&course=${courseId}`)
             if (enrollmentResponse.ok) {
               const enrollmentData = await enrollmentResponse.json()
-              setIsEnrolled(enrollmentData.success && enrollmentData.data)
+              if (enrollmentData.success && enrollmentData.data) {
+                setIsEnrolled(true)
+                setEnrollmentId(enrollmentData.data._id)
+              } else {
+                setIsEnrolled(false)
+                setEnrollmentId(null)
+              }
             }
           }
         }
@@ -234,6 +242,7 @@ export default function CoursePage() {
         const data = await response.json()
         if (data.success) {
           setIsEnrolled(true)
+          setEnrollmentId(data.data._id)
           setEnrollmentSuccess(true)
           setEnrollmentError(null)
           // Hide success message after 3 seconds
@@ -253,6 +262,43 @@ export default function CoursePage() {
       console.error('Enrollment error:', err)
     } finally {
       setEnrolling(false)
+    }
+  }
+
+  // Handle course withdrawal
+  const handleWithdraw = async () => {
+    if (!enrollmentId) return
+    
+    try {
+      setWithdrawing(true)
+      const response = await fetch(`/api/enrollments/${enrollmentId}`, {
+        method: 'DELETE',
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setIsEnrolled(false)
+          setEnrollmentId(null)
+          setEnrollmentSuccess(true)
+          setEnrollmentError(null)
+          // Show withdrawal success message
+          setTimeout(() => setEnrollmentSuccess(false), 3000)
+        } else {
+          setEnrollmentError(data.message || 'Withdrawal failed')
+          console.error('Withdrawal failed:', data.message)
+        }
+      } else {
+        const errorText = response.statusText || 'Withdrawal failed'
+        setEnrollmentError(errorText)
+        console.error('Withdrawal failed:', errorText)
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred'
+      setEnrollmentError(errorMessage)
+      console.error('Withdrawal error:', err)
+    } finally {
+      setWithdrawing(false)
     }
   }
 
@@ -437,7 +483,9 @@ export default function CoursePage() {
               <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                 <div className="flex items-center text-green-800">
                   <CheckCircle className="w-5 h-5 mr-2" />
-                  <span className="font-medium">Successfully enrolled in the course!</span>
+                  <span className="font-medium">
+                    {isEnrolled ? 'Successfully enrolled in the course!' : 'Successfully withdrawn from the course!'}
+                  </span>
                 </div>
               </div>
             )}
@@ -459,10 +507,31 @@ export default function CoursePage() {
 
                   <div className="space-y-4">
                     {isEnrolled ? (
-                      <Button className="w-full" size="lg" variant="secondary" disabled>
-                        <CheckCircle className="w-5 h-5 mr-2" />
-                        Enrolled
-                      </Button>
+                      <div className="space-y-3">
+                        <Button className="w-full" size="lg" variant="secondary" disabled>
+                          <CheckCircle className="w-5 h-5 mr-2" />
+                          Enrolled
+                        </Button>
+                        <Button 
+                          className="w-full" 
+                          size="lg" 
+                          variant="outline"
+                          onClick={handleWithdraw}
+                          disabled={withdrawing}
+                        >
+                          {withdrawing ? (
+                            <>
+                              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                              Withdrawing...
+                            </>
+                          ) : (
+                            <>
+                              <X className="w-5 h-5 mr-2" />
+                              Withdraw
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     ) : (
                       <Button 
                         className="w-full" 
