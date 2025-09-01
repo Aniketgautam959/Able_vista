@@ -5,10 +5,6 @@ export interface IUser extends Document {
   email: string;
   password: string;
   role: 'student' | 'instructor' | 'admin';
-  isEmailVerified: boolean;
-  emailVerificationToken?: string;
-  passwordResetToken?: string;
-  passwordResetExpires?: Date;
   lastLoginAt?: Date;
   isActive: boolean;
   createdAt: Date;
@@ -40,13 +36,6 @@ const userSchema = new Schema<IUser>({
     enum: ['student', 'instructor', 'admin'],
     default: 'student'
   },
-  isEmailVerified: {
-    type: Boolean,
-    default: false
-  },
-  emailVerificationToken: String,
-  passwordResetToken: String,
-  passwordResetExpires: Date,
   lastLoginAt: Date,
   isActive: {
     type: Boolean,

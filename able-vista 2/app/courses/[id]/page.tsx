@@ -284,6 +284,9 @@ export default function CoursePage() {
           setEnrollmentError(null)
           // Show withdrawal success message
           setTimeout(() => setEnrollmentSuccess(false), 3000)
+          
+          // Clear any cached progress data for this course
+          console.log("Course and all progress data deleted successfully")
         } else {
           setEnrollmentError(data.message || 'Withdrawal failed')
           console.error('Withdrawal failed:', data.message)

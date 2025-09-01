@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '../../../../lib/db'
 import { Enrollment } from '../../../../models'
 import { validateAuth } from '../../../../lib/auth'
+import Progress from '../../../../models/Progress'
 
 interface EnrollmentResponse {
   success: boolean
@@ -162,6 +163,15 @@ export async function DELETE(
       }, { status: 403 })
     }
 
+    // Delete all progress records for this user and course
+    const progressResult = await Progress.deleteMany({
+      user: authResult.user!.userId,
+      course: enrollment.course
+    })
+
+    console.log(`Deleted ${progressResult.deletedCount} progress records for course ${enrollment.course}`)
+
+    // Delete the enrollment
     await Enrollment.findByIdAndDelete(params.id)
 
     return NextResponse.json({

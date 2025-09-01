@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import {
   Star,
   BookOpen,
@@ -22,6 +23,15 @@ import {
   SkipBack,
   SkipForward,
   Loader2,
+  Menu,
+  Maximize2,
+  Minimize2,
+  Download,
+  Share2,
+  Bookmark,
+  Eye,
+  EyeOff,
+  Pause,
 } from "lucide-react"
 import Link from "next/link"
 import { ChatBot } from "@/components/chat-bot"
@@ -39,12 +49,6 @@ interface Course {
   description: string
 }
 
-interface LessonContent {
-  videoUrl?: string
-  textContent?: string
-  attachments: any[]
-}
-
 interface Lesson {
   _id: string
   title: string
@@ -55,7 +59,9 @@ interface Lesson {
   type: 'video' | 'reading' | 'project'
   duration: string
   durationMinutes: number
-  content: LessonContent
+  videoUrl?: string
+  textContent?: string
+  attachments: any[]
   isPublished: boolean
   isFree: boolean
   createdAt: string
@@ -77,6 +83,23 @@ export default function LecturePage() {
   const [lessonData, setLessonData] = useState<Lesson | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [showSidebar, setShowSidebar] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [isCompleted, setIsCompleted] = useState(false)
+  const [showNotes, setShowNotes] = useState(false)
+  const [notes, setNotes] = useState("")
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Check if device is mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // Fetch lesson data from API
   useEffect(() => {
@@ -105,6 +128,45 @@ export default function LecturePage() {
     }
   }, [lessonId])
 
+  // Handle fullscreen toggle
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen()
+      setIsFullscreen(true)
+    } else {
+      document.exitFullscreen()
+      setIsFullscreen(false)
+    }
+  }
+
+  // Handle lesson completion
+  const handleComplete = async () => {
+    try {
+      const response = await fetch(`/api/progress/${lessonId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          completed: true,
+          timeSpent: 300, // 5 minutes default
+        }),
+      })
+      
+      if (response.ok) {
+        setIsCompleted(true)
+        setProgress(100)
+      }
+    } catch (error) {
+      console.error('Failed to mark lesson as completed:', error)
+    }
+  }
+
+  // Handle video play/pause
+  const handleVideoToggle = () => {
+    setIsPlaying(!isPlaying)
+  }
+
   // Loading state
   if (loading) {
     return (
@@ -120,8 +182,8 @@ export default function LecturePage() {
   // Error state
   if (error || !lessonData) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center max-w-md">
           <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <BookOpen className="w-8 h-8 text-destructive" />
           </div>
@@ -157,8 +219,42 @@ export default function LecturePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+      {/* Mobile Header */}
+      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50 md:hidden">
+        <div className="flex items-center justify-between px-4 py-3">
+          <Link
+            href={`/courses/${courseId}`}
+            className="flex items-center space-x-2 text-foreground hover:text-primary transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="text-sm">Back</span>
+          </Link>
+          
+          <div className="flex items-center space-x-2">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <Menu className="w-5 h-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-80">
+                <div className="space-y-4">
+                  <h3 className="font-semibold">Course Navigation</h3>
+                  <div className="space-y-2">
+                    <div className="p-3 bg-muted rounded-lg">
+                      <h4 className="font-medium text-sm">{lessonData.course.title}</h4>
+                      <p className="text-xs text-muted-foreground mt-1">{lessonData.chapter.title}</p>
+                    </div>
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+        </div>
+      </header>
+
+      {/* Desktop Header */}
+      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50 hidden md:block">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link
             href={`/courses/${courseId}`}
@@ -176,18 +272,18 @@ export default function LecturePage() {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-6">
-        {/* Lecture Header */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-2">
-            <Badge variant="secondary">{lessonData.course.title}</Badge>
-            <Badge variant="outline">
+      <div className="container mx-auto px-4 py-4 md:py-6">
+        {/* Lecture Header - Responsive */}
+        <div className="mb-4 md:mb-6">
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <Badge variant="secondary" className="text-xs md:text-sm">{lessonData.course.title}</Badge>
+            <Badge variant="outline" className="text-xs md:text-sm">
               {lessonData.chapter.title}
             </Badge>
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">{lessonData.title}</h1>
-          <p className="text-muted-foreground mb-4">{lessonData.description}</p>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground mb-2">{lessonData.title}</h1>
+          <p className="text-sm md:text-base text-muted-foreground mb-4">{lessonData.description}</p>
+          <div className="flex flex-wrap items-center gap-4 text-xs md:text-sm text-muted-foreground">
             <div className="flex items-center">
               <Clock className="w-4 h-4 mr-1" />
               <span>{lessonData.duration}</span>
@@ -196,56 +292,92 @@ export default function LecturePage() {
               {getTypeIcon(lessonData.type)}
               <span className="ml-1 capitalize">{lessonData.type}</span>
             </div>
+            <div className="flex items-center">
+              <CheckCircle className="w-4 h-4 mr-1" />
+              <span>Lesson {lessonData.order}</span>
+            </div>
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-4 gap-8">
-          {/* Video Player */}
+        {/* Main Content Grid - Responsive */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8">
+          {/* Video Player - Responsive */}
           <div className="lg:col-span-3">
-            <Card className="border-border mb-6">
+            <Card className="border-border mb-4 md:mb-6">
               <CardContent className="p-0">
-                <div className="aspect-video bg-black rounded-lg overflow-hidden relative">
-                  {lessonData.content.videoUrl ? (
-                    <iframe
-                      src={getEmbedUrl(lessonData.content.videoUrl)}
-                      title={lessonData.title}
-                      className="w-full h-full"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
+                <div className="aspect-video bg-black rounded-lg overflow-hidden relative group">
+                  {lessonData.videoUrl ? (
+                    <>
+                      <iframe
+                        src={getEmbedUrl(lessonData.videoUrl)}
+                        title={lessonData.title}
+                        className="w-full h-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                      {/* Video Overlay Controls */}
+                      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <div className="flex items-center space-x-4">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={handleVideoToggle}
+                            className="bg-black/50 text-white hover:bg-black/70"
+                          >
+                            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={toggleFullscreen}
+                            className="bg-black/50 text-white hover:bg-black/70"
+                          >
+                            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                          </Button>
+                        </div>
+                      </div>
+                    </>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-white">
                       <div className="text-center">
-                        <Video className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                        <p>No video available</p>
+                        <Video className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-4 opacity-50" />
+                        <p className="text-sm md:text-base">No video available</p>
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* Video Controls */}
-                <div className="p-4 border-t border-border">
-                  <div className="flex items-center justify-between">
+                {/* Video Controls - Responsive */}
+                <div className="p-3 md:p-4 border-t border-border">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between space-y-3 md:space-y-0">
                     <div className="flex items-center space-x-2">
-                      <Button variant="ghost" size="sm" disabled>
-                        <SkipBack className="w-4 h-4 mr-1" />
+                      <Button variant="ghost" size="sm" disabled className="text-xs md:text-sm">
+                        <SkipBack className="w-3 h-3 md:w-4 md:h-4 mr-1" />
                         Previous
                       </Button>
-
-                      <Button variant="ghost" size="sm" disabled>
+                      <Button variant="ghost" size="sm" disabled className="text-xs md:text-sm">
                         Next
-                        <SkipForward className="w-4 h-4 ml-1" />
+                        <SkipForward className="w-3 h-3 md:w-4 md:h-4 ml-1" />
                       </Button>
                     </div>
 
                     <div className="flex items-center space-x-2">
-                      <Button variant="ghost" size="sm">
-                        <Volume2 className="w-4 h-4 mr-1" />
+                      <Button variant="ghost" size="sm" className="text-xs md:text-sm">
+                        <Volume2 className="w-3 h-3 md:w-4 md:h-4 mr-1" />
                         Audio
                       </Button>
-                      <Button variant="ghost" size="sm">
-                        <MessageCircle className="w-4 h-4 mr-1" />
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setShowNotes(!showNotes)}
+                        className="text-xs md:text-sm"
+                      >
+                        <MessageCircle className="w-3 h-3 md:w-4 md:h-4 mr-1" />
                         Notes
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-xs md:text-sm">
+                        <Share2 className="w-3 h-3 md:w-4 md:h-4 mr-1" />
+                        Share
                       </Button>
                     </div>
                   </div>
@@ -253,37 +385,92 @@ export default function LecturePage() {
               </CardContent>
             </Card>
 
-            {/* Lesson Content */}
-            {lessonData.content.textContent && (
-              <Card className="border-border mb-6">
+            {/* Progress Section */}
+            <Card className="border-border mb-4 md:mb-6">
+              <CardContent className="p-4 md:p-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-sm md:text-base">Your Progress</h3>
+                  <Badge variant={isCompleted ? "default" : "secondary"}>
+                    {isCompleted ? "Completed" : "In Progress"}
+                  </Badge>
+                </div>
+                <Progress value={progress} className="h-2 mb-3" />
+                <div className="flex items-center justify-between">
+                  <span className="text-xs md:text-sm text-muted-foreground">{progress}% Complete</span>
+                  {!isCompleted && (
+                    <Button size="sm" onClick={handleComplete} className="text-xs">
+                      Mark Complete
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Notes Section */}
+            {showNotes && (
+              <Card className="border-border mb-4 md:mb-6">
                 <CardHeader>
-                  <CardTitle>Lesson Content</CardTitle>
+                  <CardTitle className="text-sm md:text-base">My Notes</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="prose prose-sm max-w-none">
-                    <p className="text-muted-foreground whitespace-pre-wrap">{lessonData.content.textContent}</p>
+                  <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Add your notes here..."
+                    className="w-full h-32 p-3 border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <div className="flex justify-end mt-3">
+                    <Button size="sm" variant="outline">
+                      Save Notes
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* Attachments */}
-            {lessonData.content.attachments && lessonData.content.attachments.length > 0 && (
-              <Card className="border-border mb-6">
+            {/* Lesson Content - Responsive */}
+            {lessonData.textContent && (
+              <Card className="border-border mb-4 md:mb-6">
                 <CardHeader>
-                  <CardTitle>Attachments</CardTitle>
+                  <CardTitle className="text-sm md:text-base">Lesson Content</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="prose prose-sm md:prose-base max-w-none">
+                    <p className="text-muted-foreground whitespace-pre-wrap text-sm md:text-base">{lessonData.textContent}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Attachments - Responsive */}
+            {lessonData.attachments && lessonData.attachments.length > 0 && (
+              <Card className="border-border mb-4 md:mb-6">
+                <CardHeader>
+                  <CardTitle className="text-sm md:text-base">Attachments</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {lessonData.content.attachments.map((attachment, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 border border-border rounded-lg">
-                        <div className="flex items-center space-x-3">
+                    {lessonData.attachments.map((attachment, index) => (
+                      <div key={index} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border border-border rounded-lg">
+                        <div className="flex items-center space-x-3 mb-2 sm:mb-0">
                           <FileText className="w-5 h-5 text-muted-foreground" />
-                          <span className="text-sm font-medium">{attachment.name}</span>
+                          <div>
+                            <span className="text-sm font-medium">{attachment.name}</span>
+                            {attachment.description && (
+                              <p className="text-xs text-muted-foreground">{attachment.description}</p>
+                            )}
+                          </div>
                         </div>
-                        <Button variant="outline" size="sm">
-                          Download
-                        </Button>
+                        <div className="flex space-x-2">
+                          <Button variant="outline" size="sm" className="text-xs">
+                            <Eye className="w-3 h-3 mr-1" />
+                            View
+                          </Button>
+                          <Button variant="outline" size="sm" className="text-xs">
+                            <Download className="w-3 h-3 mr-1" />
+                            Download
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -291,45 +478,45 @@ export default function LecturePage() {
               </Card>
             )}
 
-            {/* Course Info */}
+            {/* Course Info - Responsive */}
             <Card className="border-border">
-              <CardContent className="p-6">
+              <CardContent className="p-4 md:p-6">
                 <div className="space-y-4">
                   <div>
-                    <h3 className="font-semibold text-foreground mb-2">Course: {lessonData.course.title}</h3>
-                    <p className="text-sm text-muted-foreground">{lessonData.course.description}</p>
+                    <h3 className="font-semibold text-foreground mb-2 text-sm md:text-base">Course: {lessonData.course.title}</h3>
+                    <p className="text-xs md:text-sm text-muted-foreground">{lessonData.course.description}</p>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-foreground mb-2">Chapter: {lessonData.chapter.title}</h3>
-                    <p className="text-sm text-muted-foreground">{lessonData.chapter.description}</p>
+                    <h3 className="font-semibold text-foreground mb-2 text-sm md:text-base">Chapter: {lessonData.chapter.title}</h3>
+                    <p className="text-xs md:text-sm text-muted-foreground">{lessonData.chapter.description}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Course Plan Sidebar */}
+          {/* Course Plan Sidebar - Responsive */}
           <div className="lg:col-span-1">
             <Card className="border-border sticky top-24">
               <CardHeader>
-                <CardTitle className="flex items-center justify-between">
+                <CardTitle className="flex items-center justify-between text-sm md:text-base">
                   <span>Course Plan</span>
-                  <Badge variant="outline">
+                  <Badge variant="outline" className="text-xs">
                     Lesson {lessonData.order}
                   </Badge>
                 </CardTitle>
                 <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
+                  <div className="flex justify-between text-xs md:text-sm">
                     <span className="text-muted-foreground">Progress</span>
-                    <span className="text-foreground font-medium">0%</span>
+                    <span className="text-foreground font-medium">{progress}%</span>
                   </div>
-                  <Progress value={0} className="h-2" />
+                  <Progress value={progress} className="h-2" />
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="text-center py-8 text-muted-foreground">
-                  <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">Course navigation will be available here</p>
+                <div className="text-center py-6 md:py-8 text-muted-foreground">
+                  <BookOpen className="w-6 h-6 md:w-8 md:h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-xs md:text-sm">Course navigation will be available here</p>
                 </div>
               </CardContent>
             </Card>
@@ -337,15 +524,15 @@ export default function LecturePage() {
         </div>
       </div>
 
-      {/* AI Chatbot */}
+      {/* AI Chatbot - Responsive */}
       <Button
-        className="fixed bottom-6 right-6 rounded-full w-14 h-14 shadow-lg"
+        className="fixed bottom-4 right-4 md:bottom-6 md:right-6 rounded-full w-12 h-12 md:w-14 md:h-14 shadow-lg"
         onClick={() => {
           console.log("[v0] Lecture chatbot button clicked, current state:", showChatBot)
           setShowChatBot(!showChatBot)
         }}
       >
-        <MessageCircle className="w-6 h-6" />
+        <MessageCircle className="w-5 h-5 md:w-6 md:h-6" />
       </Button>
       {showChatBot && (
         <ChatBot

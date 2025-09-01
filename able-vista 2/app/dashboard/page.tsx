@@ -236,6 +236,8 @@ export default function DashboardPage() {
         if (statsResponse.data.success) {
           setUserStats(statsResponse.data.data);
         }
+
+        console.log("Course and all progress data deleted successfully");
       }
     } catch (error) {
       console.error("Failed to remove course:", error);
