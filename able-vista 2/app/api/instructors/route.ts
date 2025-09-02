@@ -16,6 +16,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<Instructor
     const { searchParams } = new URL(request.url)
     const expertise = searchParams.get('expertise')
     const verified = searchParams.get('verified')
+    const user = searchParams.get('user')
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
     const skip = (page - 1) * limit
@@ -24,6 +25,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<Instructor
     const filter: any = { isActive: true }
     if (expertise) filter.expertise = { $in: [expertise] }
     if (verified) filter.isVerified = verified === 'true'
+    if (user) filter.user = user
 
     const instructors = await Instructor.find(filter)
       .populate('user', 'name email')
