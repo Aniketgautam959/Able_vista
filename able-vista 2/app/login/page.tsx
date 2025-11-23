@@ -58,7 +58,11 @@ export default function LoginPage(): JSX.Element {
       toast.success("Login successful! Welcome back.");
 
       setTimeout(() => {
-        router.push("/dashboard");
+        if (data.onboardingCompleted === false) {
+          router.push("/onboarding");
+        } else {
+          router.push("/dashboard");
+        }
       }, 1000);
     } catch (error: unknown) {
       toast.dismiss(loadingToast);
