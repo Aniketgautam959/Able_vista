@@ -70,8 +70,8 @@
     "ts-node": "^10.9.2",
     "validator": "^13.15.15",
     "vaul": "^0.9.9",
-    "youtube-transcript": "^1.2.1",
-    "zod": "3.25.67"
+    "zod": "^3.25.76",
+    "youtube-transcript": "^1.2.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.9",
