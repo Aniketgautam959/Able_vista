@@ -10,7 +10,6 @@ interface CourseData {
   description: string
   category: string
   level: string
-  price: number
   duration: string
   estimatedHours: number
   image: string
@@ -106,7 +105,6 @@ export async function GET(request: NextRequest): Promise<NextResponse<MyCourseRe
             description: course.description,
             category: course.category,
             level: course.level,
-            price: course.price,
             duration: course.duration,
             estimatedHours: course.estimatedHours,
             image: course.image,

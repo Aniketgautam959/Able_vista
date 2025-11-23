@@ -19,7 +19,6 @@ interface Course {
   description: string
   category: string
   level: string
-  price: number
   duration: string
   estimatedHours: number
   isPublished: boolean
@@ -77,7 +76,6 @@ export default function InstructorDashboard() {
     description: '',
     category: '',
     level: '',
-    price: '',
     duration: '',
     estimatedHours: '',
     skills: '',
@@ -177,7 +175,6 @@ export default function InstructorDashboard() {
         },
         body: JSON.stringify({
           ...courseForm,
-          price: parseFloat(courseForm.price),
           estimatedHours: parseInt(courseForm.estimatedHours),
           skills: courseForm.skills.split(',').map(s => s.trim()).filter(Boolean),
           requirements: courseForm.requirements.split(',').map(s => s.trim()).filter(Boolean),
@@ -197,7 +194,6 @@ export default function InstructorDashboard() {
           description: '',
           category: '',
           level: '',
-          price: '',
           duration: '',
           estimatedHours: '',
           skills: '',
@@ -365,141 +361,132 @@ export default function InstructorDashboard() {
     <div className="min-h-screen bg-gray-50">
       <Navigation />
       <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Instructor Dashboard</h1>
-          <p className="text-gray-600 mt-2">Welcome back, {instructor.user.name}</p>
-        </div>
-        <Dialog open={showCreateCourse} onOpenChange={setShowCreateCourse}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Create Course
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Create New Course</DialogTitle>
-              <DialogDescription>
-                Fill in the details to create a new course.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <Label htmlFor="title">Course Title</Label>
-                <Input
-                  id="title"
-                  value={courseForm.title}
-                  onChange={(e) => setCourseForm({ ...courseForm, title: e.target.value })}
-                  placeholder="Enter course title"
-                />
-              </div>
-              <div className="col-span-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={courseForm.description}
-                  onChange={(e) => setCourseForm({ ...courseForm, description: e.target.value })}
-                  placeholder="Enter course description"
-                />
-              </div>
-              <div>
-                <Label htmlFor="category">Category</Label>
-                <Select value={courseForm.category} onValueChange={(value) => setCourseForm({ ...courseForm, category: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Web Development">Web Development</SelectItem>
-                    <SelectItem value="AI">AI</SelectItem>
-                    <SelectItem value="Design">Design</SelectItem>
-                    <SelectItem value="Data Science">Data Science</SelectItem>
-                    <SelectItem value="Mobile Development">Mobile Development</SelectItem>
-                    <SelectItem value="DevOps">DevOps</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="level">Level</Label>
-                <Select value={courseForm.level} onValueChange={(value) => setCourseForm({ ...courseForm, level: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Beginner">Beginner</SelectItem>
-                    <SelectItem value="Intermediate">Intermediate</SelectItem>
-                    <SelectItem value="Advanced">Advanced</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="price">Price ($)</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  value={courseForm.price}
-                  onChange={(e) => setCourseForm({ ...courseForm, price: e.target.value })}
-                  placeholder="0.00"
-                />
-              </div>
-              <div>
-                <Label htmlFor="duration">Duration</Label>
-                <Input
-                  id="duration"
-                  value={courseForm.duration}
-                  onChange={(e) => setCourseForm({ ...courseForm, duration: e.target.value })}
-                  placeholder="e.g., 8 weeks"
-                />
-              </div>
-              <div>
-                <Label htmlFor="estimatedHours">Estimated Hours</Label>
-                <Input
-                  id="estimatedHours"
-                  type="number"
-                  value={courseForm.estimatedHours}
-                  onChange={(e) => setCourseForm({ ...courseForm, estimatedHours: e.target.value })}
-                  placeholder="40"
-                />
-              </div>
-              <div className="col-span-2">
-                <Label htmlFor="skills">Skills (comma-separated)</Label>
-                <Input
-                  id="skills"
-                  value={courseForm.skills}
-                  onChange={(e) => setCourseForm({ ...courseForm, skills: e.target.value })}
-                  placeholder="React, Node.js, MongoDB"
-                />
-              </div>
-              <div className="col-span-2">
-                <Label htmlFor="requirements">Requirements (comma-separated)</Label>
-                <Input
-                  id="requirements"
-                  value={courseForm.requirements}
-                  onChange={(e) => setCourseForm({ ...courseForm, requirements: e.target.value })}
-                  placeholder="Basic JavaScript knowledge"
-                />
-              </div>
-              <div className="col-span-2">
-                <Label htmlFor="whatYouLearn">What You'll Learn (comma-separated)</Label>
-                <Input
-                  id="whatYouLearn"
-                  value={courseForm.whatYouLearn}
-                  onChange={(e) => setCourseForm({ ...courseForm, whatYouLearn: e.target.value })}
-                  placeholder="Build full-stack applications"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <Button variant="outline" onClick={() => setShowCreateCourse(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreateCourse}>
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Instructor Dashboard</h1>
+            <p className="text-gray-600 mt-2">Welcome back, {instructor.user.name}</p>
+          </div>
+          <Dialog open={showCreateCourse} onOpenChange={setShowCreateCourse}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
                 Create Course
               </Button>
-            </div>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Create New Course</DialogTitle>
+                <DialogDescription>
+                  Fill in the details to create a new course.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <Label htmlFor="title">Course Title</Label>
+                  <Input
+                    id="title"
+                    value={courseForm.title}
+                    onChange={(e) => setCourseForm({ ...courseForm, title: e.target.value })}
+                    placeholder="Enter course title"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={courseForm.description}
+                    onChange={(e) => setCourseForm({ ...courseForm, description: e.target.value })}
+                    placeholder="Enter course description"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="category">Category</Label>
+                  <Select value={courseForm.category} onValueChange={(value) => setCourseForm({ ...courseForm, category: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Web Development">Web Development</SelectItem>
+                      <SelectItem value="AI">AI</SelectItem>
+                      <SelectItem value="Design">Design</SelectItem>
+                      <SelectItem value="Data Science">Data Science</SelectItem>
+                      <SelectItem value="Mobile Development">Mobile Development</SelectItem>
+                      <SelectItem value="DevOps">DevOps</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="level">Level</Label>
+                  <Select value={courseForm.level} onValueChange={(value) => setCourseForm({ ...courseForm, level: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Beginner">Beginner</SelectItem>
+                      <SelectItem value="Intermediate">Intermediate</SelectItem>
+                      <SelectItem value="Advanced">Advanced</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="duration">Duration</Label>
+                  <Input
+                    id="duration"
+                    value={courseForm.duration}
+                    onChange={(e) => setCourseForm({ ...courseForm, duration: e.target.value })}
+                    placeholder="e.g., 8 weeks"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="estimatedHours">Estimated Hours</Label>
+                  <Input
+                    id="estimatedHours"
+                    type="number"
+                    value={courseForm.estimatedHours}
+                    onChange={(e) => setCourseForm({ ...courseForm, estimatedHours: e.target.value })}
+                    placeholder="40"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label htmlFor="skills">Skills (comma-separated)</Label>
+                  <Input
+                    id="skills"
+                    value={courseForm.skills}
+                    onChange={(e) => setCourseForm({ ...courseForm, skills: e.target.value })}
+                    placeholder="React, Node.js, MongoDB"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label htmlFor="requirements">Requirements (comma-separated)</Label>
+                  <Input
+                    id="requirements"
+                    value={courseForm.requirements}
+                    onChange={(e) => setCourseForm({ ...courseForm, requirements: e.target.value })}
+                    placeholder="Basic JavaScript knowledge"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label htmlFor="whatYouLearn">What You'll Learn (comma-separated)</Label>
+                  <Input
+                    id="whatYouLearn"
+                    value={courseForm.whatYouLearn}
+                    onChange={(e) => setCourseForm({ ...courseForm, whatYouLearn: e.target.value })}
+                    placeholder="Build full-stack applications"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <Button variant="outline" onClick={() => setShowCreateCourse(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleCreateCourse}>
+                  Create Course
+                </Button>
+              </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -527,10 +514,6 @@ export default function InstructorDashboard() {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Level:</span>
                   <span className="font-medium">{course.level}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Price:</span>
-                  <span className="font-medium">${course.price}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Duration:</span>
@@ -816,7 +799,6 @@ export default function InstructorDashboard() {
           </div>
         </DialogContent>
       </Dialog>
-      </div>
     </div>
   )
 }

@@ -113,10 +113,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<CourseRes
     }
 
     const body = await request.json()
-    const { title, description, category, level, price, duration, estimatedHours, skills, requirements, whatYouLearn } = body
+    const { title, description, category, level, duration, estimatedHours, skills, requirements, whatYouLearn } = body
 
     // Validate required fields
-    if (!title || !description || !category || !level || !price || !duration || !estimatedHours) {
+    if (!title || !description || !category || !level || !duration || !estimatedHours) {
       return NextResponse.json({
         success: false,
         message: 'Missing required fields'
@@ -129,7 +129,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<CourseRes
       category,
       instructor: instructor._id,
       level,
-      price,
       duration,
       estimatedHours,
       skills: skills || [],

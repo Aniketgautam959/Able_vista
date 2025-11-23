@@ -123,7 +123,7 @@ export async function PUT(
     await dbConnect()
 
     const body = await request.json()
-    const { title, description, category, level, price, duration, estimatedHours, skills, requirements, whatYouLearn, image, isPublished } = body
+    const { title, description, category, level, duration, estimatedHours, skills, requirements, whatYouLearn, image, isPublished } = body
 
     const course = await Course.findById(params.id)
     if (!course) {
@@ -141,7 +141,6 @@ export async function PUT(
         description,
         category,
         level,
-        price,
         duration,
         estimatedHours,
         skills,
