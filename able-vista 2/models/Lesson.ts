@@ -18,7 +18,7 @@ export interface ILesson extends Document {
   durationMinutes: number;
   videoUrl?: string;
   textContent?: string;
-  extracted_text?: string; // Added field
+  sources?: { uri: string; title: string }[];
   attachments: IAttachment[];
   createdAt: Date;
   updatedAt: Date;
@@ -65,7 +65,12 @@ const lessonSchema = new Schema<ILesson>({
   },
   videoUrl: String,
   textContent: String,
-  extracted_text: String, // Added field to schema
+  sources: [
+    {
+      uri: String,
+      title: String,
+    },
+  ],
   attachments: [
     {
       name: {

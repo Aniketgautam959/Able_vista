@@ -90,6 +90,8 @@ export default function LecturePage() {
   const [showNotes, setShowNotes] = useState(false)
   const [notes, setNotes] = useState("")
   const [isMobile, setIsMobile] = useState(false)
+  const [isReading, setIsReading] = useState(false)
+  const [speechUtterance, setSpeechUtterance] = useState<SpeechSynthesisUtterance | null>(null)
 
   // Check if device is mobile
   useEffect(() => {
@@ -152,7 +154,7 @@ export default function LecturePage() {
           timeSpent: 300, // 5 minutes default
         }),
       })
-      
+
       if (response.ok) {
         setIsCompleted(true)
         setProgress(100)
@@ -166,6 +168,55 @@ export default function LecturePage() {
   const handleVideoToggle = () => {
     setIsPlaying(!isPlaying)
   }
+
+  // Handle text-to-speech
+  const handleReadAloud = () => {
+    if (!lessonData?.textContent) return
+
+    // If already reading, stop it
+    if (isReading) {
+      window.speechSynthesis.cancel()
+      setIsReading(false)
+      setSpeechUtterance(null)
+      return
+    }
+
+    // Create new speech utterance
+    const utterance = new SpeechSynthesisUtterance(lessonData.textContent)
+
+    // Configure speech settings
+    utterance.rate = 1.0 // Normal speed
+    utterance.pitch = 1.0 // Normal pitch
+    utterance.volume = 1.0 // Full volume
+
+    // Handle speech events
+    utterance.onstart = () => {
+      setIsReading(true)
+    }
+
+    utterance.onend = () => {
+      setIsReading(false)
+      setSpeechUtterance(null)
+    }
+
+    utterance.onerror = (event) => {
+      console.error('Speech synthesis error:', event)
+      setIsReading(false)
+      setSpeechUtterance(null)
+    }
+
+    setSpeechUtterance(utterance)
+    window.speechSynthesis.speak(utterance)
+  }
+
+  // Cleanup speech synthesis on unmount
+  useEffect(() => {
+    return () => {
+      if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel()
+      }
+    }
+  }, [])
 
   // Loading state
   if (loading) {
@@ -229,7 +280,7 @@ export default function LecturePage() {
             <ArrowLeft className="w-5 h-5" />
             <span className="text-sm">Back</span>
           </Link>
-          
+
           <div className="flex items-center space-x-2">
             <Sheet>
               <SheetTrigger asChild>
@@ -366,9 +417,9 @@ export default function LecturePage() {
                         <Volume2 className="w-3 h-3 md:w-4 md:h-4 mr-1" />
                         Audio
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setShowNotes(!showNotes)}
                         className="text-xs md:text-sm"
                       >
@@ -432,7 +483,27 @@ export default function LecturePage() {
             {lessonData.textContent && (
               <Card className="border-border mb-4 md:mb-6">
                 <CardHeader>
-                  <CardTitle className="text-sm md:text-base">Lesson Content</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm md:text-base">Lesson Content</CardTitle>
+                    <Button
+                      variant={isReading ? "default" : "outline"}
+                      size="sm"
+                      onClick={handleReadAloud}
+                      className="text-xs md:text-sm"
+                    >
+                      {isReading ? (
+                        <>
+                          <Pause className="w-3 h-3 md:w-4 md:h-4 mr-1" />
+                          Stop Reading
+                        </>
+                      ) : (
+                        <>
+                          <Volume2 className="w-3 h-3 md:w-4 md:h-4 mr-1" />
+                          Read Aloud
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="prose prose-sm md:prose-base max-w-none">

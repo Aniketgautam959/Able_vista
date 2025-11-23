@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "../../../lib/db";
 import mongoose from "mongoose";
+import { summarizeYoutubeVideo } from "../../../services/ai/youtubetext";
 
 interface LessonResponse {
   success: boolean;
@@ -83,10 +84,17 @@ export async function POST(
       type,
       duration,
       durationMinutes,
-      videoUrl,
-      textContent,
       attachments,
     } = body;
+
+    // Extract videoUrl and textContent, handling potential nesting in 'content' object
+    let videoUrl = body.videoUrl;
+    let textContent = body.textContent;
+
+    if (body.content && typeof body.content === 'object') {
+      videoUrl = body.content.videoUrl || videoUrl;
+      textContent = body.content.textContent || textContent;
+    }
 
     // Validate required fields
     if (
@@ -110,6 +118,22 @@ export async function POST(
     // Ensure attachments is always an array
     const lessonAttachments = Array.isArray(attachments) ? attachments : [];
 
+    // Summarize YouTube video if videoUrl is provided and textContent is empty
+    let finalTextContent = textContent;
+    let videoSources: any[] = [];
+    if (videoUrl && !finalTextContent) {
+      try {
+        const summaryResult = await summarizeYoutubeVideo(videoUrl);
+        finalTextContent = summaryResult.summaryText;
+        videoSources = summaryResult.sources;
+      } catch (error) {
+        console.error("Failed to summarize YouTube video:", error);
+        // We continue without text content if summarization fails, 
+        // or you could choose to throw to abort lesson creation.
+        // For now, we'll just log it and proceed with empty text.
+      }
+    }
+
     // Get the Lesson model
     const Lesson = mongoose.model("Lesson");
 
@@ -123,7 +147,8 @@ export async function POST(
       duration,
       durationMinutes,
       videoUrl: videoUrl || "",
-      textContent: textContent || "",
+      textContent: finalTextContent || "",
+      sources: videoSources,
       attachments: lessonAttachments,
     });
 
