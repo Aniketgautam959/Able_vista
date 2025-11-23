@@ -17,6 +17,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<Instructor
     const expertise = searchParams.get('expertise')
     const verified = searchParams.get('verified')
     const user = searchParams.get('user')
+    console.log(user)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
     const skip = (page - 1) * limit

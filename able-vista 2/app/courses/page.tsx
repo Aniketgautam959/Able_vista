@@ -39,7 +39,6 @@ interface Course {
   category: string
   instructor: Instructor
   level: string
-  price: number
   duration: string
   estimatedHours: number
   image: string

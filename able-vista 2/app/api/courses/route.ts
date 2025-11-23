@@ -92,10 +92,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<CourseRes
     await dbConnect()
 
     const body = await request.json()
-    const { title, description, category, instructor, level, price, duration, estimatedHours, skills, requirements, whatYouLearn } = body
+    const { title, description, category, instructor, level, duration, estimatedHours, skills, requirements, whatYouLearn } = body
 
     // Validate required fields
-    if (!title || !description || !category || !instructor || !level || !price || !duration || !estimatedHours) {
+    if (!title || !description || !category || !instructor || !level || !duration || !estimatedHours) {
       return NextResponse.json({
         success: false,
         message: 'Missing required fields'
@@ -108,7 +108,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<CourseRes
       category,
       instructor,
       level,
-      price,
       duration,
       estimatedHours,
       skills: skills || [],

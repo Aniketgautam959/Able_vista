@@ -6,7 +6,6 @@ export interface ICourse extends Document {
   category: 'Web Development' | 'AI' | 'Design' | 'Data Science' | 'Mobile Development' | 'DevOps' | 'Other';
   instructor: Types.ObjectId;
   level: 'Beginner' | 'Intermediate' | 'Advanced';
-  price: number;
   duration: string;
   estimatedHours: number;
   image: string;
@@ -49,11 +48,6 @@ const courseSchema = new Schema<ICourse>({
     type: String,
     required: true,
     enum: ['Beginner', 'Intermediate', 'Advanced']
-  },
-  price: {
-    type: Number,
-    required: true,
-    min: 0
   },
   duration: {
     type: String,

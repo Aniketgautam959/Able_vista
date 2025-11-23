@@ -6,7 +6,6 @@ interface CourseData {
   description: string;
   category: string;
   level: string;
-  price: number;
   duration: string;
   estimatedHours: number;
   image: string;
