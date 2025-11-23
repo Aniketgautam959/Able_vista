@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "latest",
+    "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",
@@ -66,8 +67,10 @@
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
+    "ts-node": "^10.9.2",
     "validator": "^13.15.15",
     "vaul": "^0.9.9",
+    "youtube-transcript": "^1.2.1",
     "zod": "3.25.67"
   },
   "devDependencies": {
@@ -75,9 +78,10 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.2.3",
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",
     "tw-animate-css": "1.3.3",
-    "typescript": "^5"
+    "typescript": "^5.9.3"
   }
 }
