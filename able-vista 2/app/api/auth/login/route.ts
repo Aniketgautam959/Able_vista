@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import dbConnect from '../../../../lib/db'
 import User from '../../../../models/User'
+import UserProfile from '../../../../models/UserProfile'
 import { generateToken } from '../../../../lib/jwt'
 import { validateEmail, checkRateLimit } from '../../../../lib/validation'
 
@@ -20,6 +21,7 @@ interface LoginResponse {
   message: string
   token: string
   user: UserResponse
+  onboardingCompleted: boolean
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse<LoginResponse | { message: string }>> {
@@ -68,6 +70,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<LoginResp
       email: user.email
     })
 
+    // Check if user has completed onboarding
+    const userProfile = await UserProfile.findOne({ user: user._id })
+    const onboardingCompleted = !!userProfile
+
     // Create response with httpOnly cookie
     const response = NextResponse.json({
       message: 'Login successful',
@@ -76,7 +82,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<LoginResp
         id: user._id,
         name: user.name,
         email: user.email
-      }
+      },
+      onboardingCompleted
     })
 
     // Set httpOnly cookie

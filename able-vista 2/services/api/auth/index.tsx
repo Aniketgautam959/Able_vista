@@ -25,14 +25,25 @@ export interface ApiResponse<T = any> {
   data?: T
 }
 
+export interface LoginResponse {
+  message: string
+  token: string
+  user: {
+    id: string
+    name: string
+    email: string
+  }
+  onboardingCompleted?: boolean
+}
+
 /**
  * Login user
  */
 export async function loginUser(
   credentials: LoginCredentials
-): Promise<ApiResponse> {
+): Promise<LoginResponse> {
   try {
-    const response = await api.post<ApiResponse>(
+    const response = await api.post<LoginResponse>(
       `/api/auth/login`,
       credentials
     )
