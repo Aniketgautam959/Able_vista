@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -22,16 +23,48 @@ interface ChatBotProps {
 }
 
 export function ChatBot({ onClose, courseTitle, currentLesson }: ChatBotProps) {
+  const pathname = usePathname()
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      text: `Hi! I'm your AI learning assistant for ${courseTitle || "this course"}. I'm here to help you with any questions about the course content, programming concepts, or if you're stuck on a lesson. How can I assist you today?`,
+      text: `Hi! I'm your AI learning assistant for ${courseTitle || "this course"}. I'm here to help you with any questions about the lesson content. How can I assist you today?`,
       sender: "bot",
       timestamp: new Date(),
     },
   ])
   const [inputValue, setInputValue] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [lessonContent, setLessonContent] = useState<string>("")
+  const [lessonId, setLessonId] = useState<string>("")
+
+  // Extract lesson ID from URL
+  useEffect(() => {
+    if (pathname) {
+      // URL format: /courses/{courseId}/lectures/{lectureId}
+      const pathParts = pathname.split('/')
+      const lectureIndex = pathParts.indexOf('lectures')
+      if (lectureIndex !== -1 && pathParts[lectureIndex + 1]) {
+        const extractedLessonId = pathParts[lectureIndex + 1]
+        setLessonId(extractedLessonId)
+        fetchLessonContent(extractedLessonId)
+      }
+    }
+  }, [pathname])
+
+  // Fetch lesson content from MongoDB
+  const fetchLessonContent = async (id: string) => {
+    try {
+      const response = await fetch(`/api/lessons/${id}`)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.data.textContent) {
+          setLessonContent(data.data.textContent)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching lesson content:', error)
+    }
+  }
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return
@@ -49,16 +82,21 @@ export function ChatBot({ onClose, courseTitle, currentLesson }: ChatBotProps) {
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/chat", {
+      // Call Gemini API with lesson content
+      const response = await fetch("/api/chat/gemini", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           message: currentInput,
-          courseTitle: courseTitle || "Web Development Course",
-          currentLesson: currentLesson || "General Course Content",
-          conversationHistory: messages.slice(-5), // Send last 5 messages for context
+          lessonContent: lessonContent,
+          lessonTitle: currentLesson,
+          courseTitle: courseTitle,
+          conversationHistory: messages.slice(-5).map(m => ({
+            role: m.sender === "user" ? "user" : "model",
+            text: m.text
+          })),
         }),
       })
 
@@ -70,7 +108,7 @@ export function ChatBot({ onClose, courseTitle, currentLesson }: ChatBotProps) {
 
       const botResponse: Message = {
         id: messages.length + 2,
-        text: data.response || getBotResponse(currentInput),
+        text: data.response || "I'm sorry, I couldn't generate a response. Please try again.",
         sender: "bot",
         timestamp: new Date(),
       }
@@ -78,10 +116,9 @@ export function ChatBot({ onClose, courseTitle, currentLesson }: ChatBotProps) {
       setMessages((prev) => [...prev, botResponse])
     } catch (error) {
       console.error("AI response error:", error)
-      // Fallback to local responses if AI fails
       const botResponse: Message = {
         id: messages.length + 2,
-        text: getBotResponse(currentInput),
+        text: "I'm having trouble connecting to the AI service. Please try again in a moment.",
         sender: "bot",
         timestamp: new Date(),
       }
@@ -89,44 +126,6 @@ export function ChatBot({ onClose, courseTitle, currentLesson }: ChatBotProps) {
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const getBotResponse = (userInput: string): string => {
-    const input = userInput.toLowerCase()
-
-    if (input.includes("react") || input.includes("component")) {
-      return `React is a JavaScript library for building user interfaces. Components are the building blocks of React applications. ${currentLesson ? `In the context of "${currentLesson}", ` : ""}Would you like me to explain more about React components, JSX syntax, or help you with a specific React concept?`
-    }
-
-    if (input.includes("javascript") || input.includes("js")) {
-      return `JavaScript is the programming language that powers web interactivity. ${courseTitle ? `In ${courseTitle}, ` : ""}we cover ES6+ features, DOM manipulation, and modern JavaScript patterns. What specific JavaScript topic would you like help with?`
-    }
-
-    if (input.includes("node") || input.includes("backend") || input.includes("server")) {
-      return `Node.js allows you to run JavaScript on the server side. We'll cover Express.js for building APIs, working with databases, and handling authentication. ${currentLesson ? `Since you're on "${currentLesson}", ` : ""}are you having trouble with a specific backend concept?`
-    }
-
-    if (input.includes("html") || input.includes("css") || input.includes("styling")) {
-      return `HTML provides the structure of web pages, while CSS handles the styling and layout. ${currentLesson ? `For "${currentLesson}", ` : ""}I can help you with semantic HTML, CSS selectors, flexbox, grid, or responsive design. What specific aspect would you like to explore?`
-    }
-
-    if (input.includes("database") || input.includes("mongodb") || input.includes("sql")) {
-      return `Databases are crucial for storing and managing application data. We cover both SQL and NoSQL databases like MongoDB. I can help you understand database design, queries, relationships, or integration with your backend. What database topic interests you?`
-    }
-
-    if (input.includes("error") || input.includes("bug") || input.includes("not working")) {
-      return `I understand you're encountering an issue! Debugging is a crucial skill for developers. Can you describe the specific error message or behavior you're seeing? I can help you troubleshoot step by step.`
-    }
-
-    if (input.includes("help") || input.includes("stuck") || input.includes("confused")) {
-      return `I'm here to help! ${currentLesson ? `For "${currentLesson}", ` : ""}you can ask me about course content, programming concepts, code examples, or if you're stuck on a particular lesson. You can also use the text-to-speech feature to listen to explanations. What specific topic do you need help with?`
-    }
-
-    if (input.includes("project") || input.includes("assignment") || input.includes("practice")) {
-      return `Projects and assignments are great ways to apply what you've learned! I can help you understand requirements, suggest approaches, review your code structure, or troubleshoot issues. What aspect of your project would you like assistance with?`
-    }
-
-    return `That's a great question! ${courseTitle ? `For ${courseTitle}, ` : ""}I can help you with course content, explain programming concepts, provide code examples, debug issues, or clarify any lesson material. ${currentLesson ? `Since you're currently on "${currentLesson}", ` : ""}could you be more specific about what you'd like to learn or what you're struggling with?`
   }
 
   return (
@@ -156,9 +155,8 @@ export function ChatBot({ onClose, courseTitle, currentLesson }: ChatBotProps) {
                   </Avatar>
                 )}
                 <div
-                  className={`max-w-[70%] p-3 rounded-lg text-sm ${
-                    message.sender === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                  }`}
+                  className={`max-w-[70%] p-3 rounded-lg text-sm ${message.sender === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                    }`}
                 >
                   {message.text}
                 </div>
@@ -189,7 +187,7 @@ export function ChatBot({ onClose, courseTitle, currentLesson }: ChatBotProps) {
         <div className="p-4 border-t border-border">
           <div className="flex space-x-2">
             <Input
-              placeholder="Ask me anything about the course..."
+              placeholder="Ask me anything about this lesson..."
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}

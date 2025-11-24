@@ -79,11 +79,9 @@ export default function LecturePage() {
   const courseId = params.id as string
   const lessonId = params.lectureId as string
   const [showChatBot, setShowChatBot] = useState(true)
-  const [isPlaying, setIsPlaying] = useState(false)
   const [lessonData, setLessonData] = useState<Lesson | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isFullscreen, setIsFullscreen] = useState(false)
   const [showSidebar, setShowSidebar] = useState(false)
   const [progress, setProgress] = useState(0)
   const [isCompleted, setIsCompleted] = useState(false)
@@ -130,17 +128,6 @@ export default function LecturePage() {
     }
   }, [lessonId])
 
-  // Handle fullscreen toggle
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen()
-      setIsFullscreen(true)
-    } else {
-      document.exitFullscreen()
-      setIsFullscreen(false)
-    }
-  }
-
   // Handle lesson completion
   const handleComplete = async () => {
     try {
@@ -164,14 +151,15 @@ export default function LecturePage() {
     }
   }
 
-  // Handle video play/pause
-  const handleVideoToggle = () => {
-    setIsPlaying(!isPlaying)
-  }
-
   // Handle text-to-speech
   const handleReadAloud = () => {
     if (!lessonData?.textContent) return
+
+    // Check if speech synthesis is supported
+    if (!window.speechSynthesis) {
+      console.error('Speech synthesis not supported in this browser')
+      return
+    }
 
     // If already reading, stop it
     if (isReading) {
@@ -200,13 +188,27 @@ export default function LecturePage() {
     }
 
     utterance.onerror = (event) => {
-      console.error('Speech synthesis error:', event)
+      // Extract useful error information
+      const errorInfo = {
+        error: event.error,
+        message: event.error || 'Unknown error',
+        charIndex: event.charIndex,
+        elapsedTime: event.elapsedTime
+      }
+      console.error('Speech synthesis error:', errorInfo)
       setIsReading(false)
       setSpeechUtterance(null)
     }
 
     setSpeechUtterance(utterance)
-    window.speechSynthesis.speak(utterance)
+
+    // Cancel any ongoing speech before starting new one
+    window.speechSynthesis.cancel()
+
+    // Small delay to ensure cancellation completes
+    setTimeout(() => {
+      window.speechSynthesis.speak(utterance)
+    }, 100)
   }
 
   // Cleanup speech synthesis on unmount
@@ -261,11 +263,29 @@ export default function LecturePage() {
 
   // Convert YouTube URL to embed format
   const getEmbedUrl = (url: string) => {
-    if (url.includes('youtube.com/watch?v=')) {
-      const videoId = url.split('v=')[1]?.split('&')[0]
-      return videoId ? `https://www.youtube.com/embed/${videoId}` : url
+    try {
+      // Handle youtube.com/watch?v= format
+      if (url.includes('youtube.com/watch?v=')) {
+        const videoId = url.split('v=')[1]?.split('&')[0]
+        return videoId ? `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1` : url
+      }
+
+      // Handle youtu.be/ short format
+      if (url.includes('youtu.be/')) {
+        const videoId = url.split('youtu.be/')[1]?.split('?')[0]
+        return videoId ? `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1` : url
+      }
+
+      // Handle youtube.com/embed/ format (already embedded)
+      if (url.includes('youtube.com/embed/')) {
+        return url.includes('?') ? url : `${url}?rel=0&modestbranding=1`
+      }
+
+      return url
+    } catch (error) {
+      console.error('Error parsing video URL:', error)
+      return url
     }
-    return url
   }
 
   return (
@@ -356,38 +376,15 @@ export default function LecturePage() {
           <div className="lg:col-span-3">
             <Card className="border-border mb-4 md:mb-6">
               <CardContent className="p-0">
-                <div className="aspect-video bg-black rounded-lg overflow-hidden relative group">
+                <div className="aspect-video bg-black rounded-lg overflow-hidden relative">
                   {lessonData.videoUrl ? (
-                    <>
-                      <iframe
-                        src={getEmbedUrl(lessonData.videoUrl)}
-                        title={lessonData.title}
-                        className="w-full h-full"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
-                      {/* Video Overlay Controls */}
-                      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <div className="flex items-center space-x-4">
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={handleVideoToggle}
-                            className="bg-black/50 text-white hover:bg-black/70"
-                          >
-                            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={toggleFullscreen}
-                            className="bg-black/50 text-white hover:bg-black/70"
-                          >
-                            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-                          </Button>
-                        </div>
-                      </div>
-                    </>
+                    <iframe
+                      src={getEmbedUrl(lessonData.videoUrl)}
+                      title={lessonData.title}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                    />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-white">
                       <div className="text-center">
